@@ -14,7 +14,7 @@ def coin(p1):
     else:
         return 1
 
-def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks):
+def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks, plotting=False):
 
     cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.45, 0.0, 0.0, 0.9, 1.0])
     cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
@@ -27,26 +27,27 @@ def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks):
     ymin, ymax = -ybound, ybound
 
     diffZ=(obsZ/np.max(obsZ))-(modelZ/np.max(modelZ))
-    
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(24, 8))
 
-    ax1.set_xlabel('Distance (um)')
-    ax1.set_ylabel('Distance (um)')
-    ax1.set_title('Observed Manhattan NN Distances')
-    im = ax1.imshow(obsZ/np.max(obsZ), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
-    ax1.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+    if plotting==True:
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(24, 8))
 
-    ax2.set_xlabel('Distance (um)')
-    ax2.set_ylabel('Distance (um)')
-    ax2.set_title('MOM Manhattan NN Distances')
-    im = ax2.imshow(modelZ/np.max(modelZ), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
-    ax2.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+        ax1.set_xlabel('Distance (um)')
+        ax1.set_ylabel('Distance (um)')
+        ax1.set_title('Observed Manhattan NN Distances')
+        im = ax1.imshow(obsZ/np.max(obsZ), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        ax1.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
 
-    ax3.set_xlabel('Distance (um)')
-    ax3.set_ylabel('Distance (um)')
-    ax3.set_title('Difference in Observed and Expected NN Distances')
-    im = ax3.imshow(diffZ, aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
-    ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+        ax2.set_xlabel('Distance (um)')
+        ax2.set_ylabel('Distance (um)')
+        ax2.set_title('MOM Manhattan NN Distances')
+        im = ax2.imshow(modelZ/np.max(modelZ), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        ax2.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+
+        ax3.set_xlabel('Distance (um)')
+        ax3.set_ylabel('Distance (um)')
+        ax3.set_title('Difference in Observed and Expected NN Distances')
+        im = ax3.imshow(diffZ, aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
 
 
     OEscore=np.round(np.sum(np.abs((obsZ/np.max(obsZ))-(modelZ/np.max(modelZ)))),3)
@@ -84,7 +85,6 @@ def stomata_fateplot(Fatemap):
     plt.title('Simulated OT Scan')
     plt.show()
 
-
 def stomata_FSC(obsZ):
 
     ############################
@@ -103,7 +103,7 @@ def stomata_FSC(obsZ):
 
     bestm=np.abs((rindex[0]-lindex[0])/((100+rindex[1])-lindex[1]))
 
-    for ang in np.arange(0, 360, 0.1):
+    for ang in np.arange(0, 360, 1):
         RobsZ = ndimage.rotate(obsZ, ang)
 
         #Split Z frame observations on the x-origin
@@ -122,7 +122,7 @@ def stomata_FSC(obsZ):
             bestm=m
             best_ang=ang
 
-    print(best_ang, bestm)
+    print('Angle Correction = '+str(best_ang)+' degrees; Left-Right Peak slope = '+str(bestm))
 
     RobsZ = ndimage.rotate(obsZ, best_ang)
     RobsZ.shape
@@ -146,28 +146,8 @@ def stomata_FSC(obsZ):
     
     return RobsZ
 
-def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5):
+def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False):
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
-
-    ax1.set_xlim([-xbound,xbound])
-    ax1.set_ylim([-ybound,ybound])
-    ax1.set_xlabel('Distance (um)')
-    ax1.set_ylabel('Distance (um)')
-    ax1.set_title('NN Distances')
-
-    NNcols=[(1,0,0),(0.9,0.75,0.05), (0.2, 0.8,0.1), (0,0.2,0.8), (0,0.1,0.6)]
-    for i in range(rankno, 0, -1):
-        ax1.plot(NNSeries[NNSeries['NN_rank']==i]['dist_xdiff'], NNSeries[NNSeries['NN_rank']==i]['dist_ydiff'], '.', color=NNcols[i-1])
-
-    ax1.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
-
-    cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.45, 0.0, 0.0, 0.9, 1.0])
-    cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
-    cb=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.75, 0.75, 0.0, 0.1, 1.0])
-
-    kde_colchan=np.vstack((cr, cg, cb)).T
-    kde_cmap=mcolors.ListedColormap(kde_colchan)
     KDDy=NNSeries['dist_xdiff']
     KDDx=NNSeries['dist_ydiff']
 
@@ -181,19 +161,40 @@ def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5):
     # Evaluate the kernel density at each grid point
     Z = np.reshape(kde(positions).T, Y.shape)
 
-    # Plot the kernel density estimate
-    plt.figure(figsize=(8,8))
+    if plotting==True:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
 
-    ax2.set_xlabel('Distance (um)')
-    ax2.set_ylabel('Distance (um)')
-    ax2.set_title('NN Distances')
-    im = ax2.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
-    ax2.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+        ax1.set_xlim([-xbound,xbound])
+        ax1.set_ylim([-ybound,ybound])
+        ax1.set_xlabel('Distance (um)')
+        ax1.set_ylabel('Distance (um)')
+        ax1.set_title('NN Distances')
 
-    fig.colorbar(im, ax=ax2)
+        NNcols=[(1,0,0),(0.9,0.75,0.05), (0.2, 0.8,0.1), (0,0.2,0.8), (0,0.1,0.6)]
+        for i in range(rankno, 0, -1):
+            ax1.plot(NNSeries[NNSeries['NN_rank']==i]['dist_xdiff'], NNSeries[NNSeries['NN_rank']==i]['dist_ydiff'], '.', color=NNcols[i-1])
+
+        ax1.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+
+        cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.45, 0.0, 0.0, 0.9, 1.0])
+        cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
+        cb=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.75, 0.75, 0.0, 0.1, 1.0])
+
+        kde_colchan=np.vstack((cr, cg, cb)).T
+        kde_cmap=mcolors.ListedColormap(kde_colchan)
+
+        # Plot the kernel density estimate
+        plt.figure(figsize=(8,8))
+
+        ax2.set_xlabel('Distance (um)')
+        ax2.set_ylabel('Distance (um)')
+        ax2.set_title('NN Distances')
+        im = ax2.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        ax2.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+
+        fig.colorbar(im, ax=ax2)
     
     return Z
-
 
 def stomata_rankedNN_biodock(biodock_SCs, rankedNNs, distance='M', rankno=5):
     
@@ -232,7 +233,7 @@ def stomata_rankedNN_biodock(biodock_SCs, rankedNNs, distance='M', rankno=5):
 
     return rankedNNs
 
-def stomata_rankedNN(Fatemap, rankedNNs, distance='M', rankno=5):
+def stomata_rankedNN(Fatemap, rankedNNs, Rep='NA', distance='M', rankno=5):
 
     InFOV=Fatemap[(Fatemap['X_center']>0) & (Fatemap['X_center']<800) & (Fatemap['Y_center']>0) & (Fatemap['Y_center']<800)]
 
@@ -698,7 +699,7 @@ def stomatagenesis(VeinMu, VeinVar, MesoWgt, MesoVar, SigMaxV, SigMaxM, SigVar, 
 
     return Fatemap3
 
-def stomata_summstats(Fatemap):
+def stomata_summstats(Fatemap, Rep):
 
     InFOV=Fatemap[(Fatemap['X_center']>0) & (Fatemap['X_center']<800) & (Fatemap['Y_center']>0) & (Fatemap['Y_center']<800)]
 
