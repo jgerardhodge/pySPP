@@ -382,7 +382,8 @@ def stomatagenesis(VeinMu, VeinVar, MesoWgt, MesoVar, SigMaxV, SigMaxM, SigVar, 
     #Now begin to integrate the signal between the veins (auxin?) and mesophyll (Stomagen?)  
 
     #Given format of 'SMC_filesignal' this should take every other column corresponding to the Mesophyll bands
-    MesoCols=np.arange(1,len(SMC_filesignal.columns),2)
+    MesoColNames=SMC_filesignal.filter(like='Meso').columns.tolist()
+    MesoCols=[SMC_filesignal.columns.get_loc(col) for col in MesoColNames]
 
     SMC_filtersignal=pd.DataFrame(index=x, columns=SMC_filesignal.columns[MesoCols])
 
