@@ -277,7 +277,7 @@ def stomata_rankedNN(Fatemap, rankedNNs, Rep='NA', distance='M', rankno=5):
     else:
 
         NNerrors='NNs_scarce_fatal_run'
-        
+
         return NNerrors, rankedNNs
 
 def stomatagenesis(VeinMu, VeinVar, MesoWgt, MesoVar, SigMaxV, SigMaxM, SigVar, SFMu, SFVar, SFEntropy, VeinFileMu, VeinFileVar, MesoFileMu, MesoFileVar, CPLenMu, CPLenVar, CPLenCov, PLenMu, PLenVar, PLenCov, GCLenMu, GCLenVar, GCLenCov, AsymLenMu, AsymLenVar, AsymLenCov, Yskew=3):
@@ -687,11 +687,11 @@ def stomatagenesis(VeinMu, VeinVar, MesoWgt, MesoVar, SigMaxV, SigMaxM, SigVar, 
             #####################################################################
 
             for j in range(0,len(GCpairs)):
-                GC1x=[int(Curregion.iloc[GCpairs[j][0],6]), int((Curregion.iloc[GCpairs[j][0],6]+Curregion.iloc[GCpairs[j][0],4]))]
-                GC1y=[int(Curregion.iloc[GCpairs[j][0],7]), int((Curregion.iloc[GCpairs[j][0],7]+Curregion.iloc[GCpairs[j][0],5]))]
+                GC1x=[int(GCpos.iloc[GCpairs[j][0],6]/2), int((GCpos.iloc[GCpairs[j][0],6]+GCpos.iloc[GCpairs[j][0],4])/2)]
+                GC1y=[int(GCpos.iloc[GCpairs[j][0],7]/2), int((GCpos.iloc[GCpairs[j][0],7]+GCpos.iloc[GCpairs[j][0],5])/2)]
 
-                GC2x=[int(Curregion.iloc[GCpairs[j][1],6]), int((Curregion.iloc[GCpairs[j][1],6]+Curregion.iloc[GCpairs[j][1],4]))]
-                GC2y=[int(Curregion.iloc[GCpairs[j][1],7]), int((Curregion.iloc[GCpairs[j][1],7]+Curregion.iloc[GCpairs[j][1],5]))]
+                GC2x=[int(GCpos.iloc[GCpairs[j][1],6]/2), int((GCpos.iloc[GCpairs[j][1],6]+GCpos.iloc[GCpairs[j][1],4])/2)]
+                GC2y=[int(GCpos.iloc[GCpairs[j][1],7]/2), int((GCpos.iloc[GCpairs[j][1],7]+GCpos.iloc[GCpairs[j][1],5])/2)]
 
                 xwin1=np.where((x>=GC1x[0]) & (x < GC1x[1])); ywin1=np.where((y>=GC1y[0]) & (y < GC1y[1]))
                 xwin2=np.where((x>=GC2x[0]) & (x < GC2x[1])); ywin2=np.where((y>=GC2y[0]) & (y < GC2y[1]))
