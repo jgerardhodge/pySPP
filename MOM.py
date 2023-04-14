@@ -85,7 +85,7 @@ def stomata_fateplot(Fatemap):
     plt.title('Simulated OT Scan')
     plt.show()
 
-def stomata_FSC(obsZ):
+def stomata_FSC(obsZ, ang=False):
 
     ############################
     # Ferguson Spin Correction
@@ -103,7 +103,28 @@ def stomata_FSC(obsZ):
 
     bestm=np.abs((rindex[0]-lindex[0])/((100+rindex[1])-lindex[1]))
 
-    for ang in np.arange(0, 360, 1):
+    if ang==False:
+        for ang in np.arange(0, 360, 1):
+            RobsZ = ndimage.rotate(obsZ, ang)
+
+            #Split Z frame observations on the x-origin
+            lhalf =pd.DataFrame(RobsZ).iloc[:,0:100]
+            rhalf =pd.DataFrame(RobsZ).iloc[:,101:200]
+
+            # Find the index of the maximum value in the subset of the array
+            lindex = np.unravel_index(np.argmax(lhalf.values), lhalf.shape)
+
+            # Find the index of the maximum value in the subset of the array
+            rindex = np.unravel_index(np.argmax(rhalf.values), rhalf.shape)
+
+            m=np.abs((rindex[0]-lindex[0])/((100+rindex[1])-lindex[1]))
+
+            if m<bestm:
+                bestm=m
+                best_ang=ang
+
+    else:
+        best_ang=ang
         RobsZ = ndimage.rotate(obsZ, ang)
 
         #Split Z frame observations on the x-origin
@@ -116,11 +137,7 @@ def stomata_FSC(obsZ):
         # Find the index of the maximum value in the subset of the array
         rindex = np.unravel_index(np.argmax(rhalf.values), rhalf.shape)
 
-        m=np.abs((rindex[0]-lindex[0])/((100+rindex[1])-lindex[1]))
-
-        if m<bestm:
-            bestm=m
-            best_ang=ang
+        bestm=np.abs((rindex[0]-lindex[0])/((100+rindex[1])-lindex[1]))
 
     print('Angle Correction = '+str(best_ang)+' degrees; Left-Right Peak slope = '+str(bestm))
 
@@ -233,6 +250,110 @@ def stomata_rankedNN_biodock(biodock_SCs, rankedNNs, distance='M', rankno=5):
 
     return rankedNNs
 
+def stomata_KDD_rorshach(Z, plotting=False):
+    ###############################
+    # Prospective Rorshach Function
+    ###############################
+
+    avgZ=Z.copy()
+
+    Xmid=avgZ.shape[0]/2
+    Ymid=avgZ.shape[1]/2
+
+    Xq1=np.arange(Xmid+1, (Xmid*2)+1, 1)-1
+    Yq1=np.arange(Ymid+1, (Ymid*2)+1, 1)-1
+
+    Xq2=np.arange(Xmid, Xmid-Xmid, -1)-1
+    Yq2=np.arange(Ymid+1, (Ymid*2)+1, 1)-1
+
+    Xq3=np.arange(Xmid, Xmid-Xmid, -1)-1
+    Yq3=np.arange(Ymid, Ymid-Ymid, -1)-1
+
+    Xq4=np.arange(Xmid+1, (Xmid*2)+1, 1)-1
+    Yq4=np.arange(Ymid, Ymid-Ymid, -1)-1
+
+    Quadrants=pd.DataFrame({'Q1x': Xq1, 'Q1y': Yq1, 'Q2x': Xq2, 'Q2y': Yq2, 'Q3x': Xq3, 'Q3y': Yq3, 'Q4x': Xq4, 'Q4y': Yq4})
+    Quadrants
+
+    for i in range(0, len(Quadrants)):
+
+        Q1_prob=avgZ[int(Xq1[i]),int(Yq1[i])]
+        Q2_prob=avgZ[int(Xq2[i]),int(Yq2[i])]
+        Q3_prob=avgZ[int(Xq3[i]),int(Yq3[i])]
+        Q4_prob=avgZ[int(Xq4[i]),int(Yq4[i])]
+        
+        quadavg=(Q1_prob+Q2_prob+Q3_prob+Q4_prob)/4
+        quadavg
+
+        avgZ[int(Xq1[i]),int(Yq1[i])]=quadavg
+        avgZ[int(Xq2[i]),int(Yq2[i])]=quadavg
+        avgZ[int(Xq3[i]),int(Yq3[i])]=quadavg
+        avgZ[int(Xq4[i]),int(Yq4[i])]=quadavg
+
+    if plotting==True:
+        plt.figure(figsize=(8,8))
+        plt.imshow(avgZ/np.max(avgZ))
+
+    return avgZ
+
+
+def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False):
+
+    KDDy=NNSeries['dist_xdiff']
+    KDDx=NNSeries['dist_ydiff']
+
+    kde = gaussian_kde(np.vstack([KDDx, KDDy]))
+
+    xmin, xmax = -xbound, xbound
+    ymin, ymax = -ybound, ybound
+
+    cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.45, 0.0, 0.0, 0.9, 1.0])
+    cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
+    cb=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.75, 0.75, 0.0, 0.1, 1.0])
+
+    kde_colchan=np.vstack((cr, cg, cb)).T
+    kde_cmap=mcolors.ListedColormap(kde_colchan)
+
+    hori_p=np.zeros(Z.shape[0])
+    hori_x=range(0,Z.shape[0])
+
+    vert_y=range(0,Z.shape[1])
+    vert_p=np.zeros(Z.shape[1])
+
+    for i in range(0,Z.shape[0]):
+        hori_p=hori_p+Z[i,:]
+        vert_p=vert_p+Z[:,i]
+
+    if plotting==True:
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [8, 4], 'height_ratios': [8, 4]}, figsize=(12, 12))
+        ax2.axis('off')
+
+        #gs = fig.add_gridspec(2, 2, height_ratios=[1, 2], width_ratios=[2, 1])
+
+        #ax1 = fig.add_subplot(gs[0, 0])
+        #plt.figure(figsize=(8,4))
+        ax1.set_xlabel('Distance (um)')
+        ax1.set_ylabel('Average Prob.')
+        ax1.set_title('Horizontal NN Distances')
+        ax1.plot(hori_x, hori_p)
+
+        #ax4 = fig.add_subplot(gs[1, 1])
+        #plt.figure(figsize=(4,8))
+        ax4.set_xlabel('Average Prob.')
+        ax4.set_ylabel('Distance (um)')
+        ax4.set_title('Vertical NN Distances')
+        ax4.plot(vert_p, vert_y)
+
+        #ax3 = fig.add_subplot(gs[1, 0])
+        #plt.figure(figsize=(8,8))
+        ax3.set_xlabel('Distance (um)')
+        ax3.set_ylabel('Distance (um)')
+        ax3.set_title('NN Distances')
+        im = ax3.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+
+    return hori_p, vert_p
+
 def stomata_rankedNN(Fatemap, rankedNNs, Rep='NA', distance='M', rankno=5):
 
     InFOV=Fatemap[(Fatemap['X_center']>0) & (Fatemap['X_center']<800) & (Fatemap['Y_center']>0) & (Fatemap['Y_center']<800)]
@@ -308,7 +429,7 @@ def stomatagenesis(VeinMu, VeinVar, MesoWgt, MesoVar, SigMaxV, SigMaxM, SigVar, 
     AsymMu=[MesoFileWid[0],AsymLenMu]
     AsymCov=[[MesoFileWid[1],AsymLenCov],[AsymLenCov,AsymLenVar]]
 
-    VeinFiles=np.round(np.random.normal(VeinMu, VeinVar, TotalVeins))
+    VeinFiles=np.round(np.random.normal(VeinMu, np.sqrt(VeinVar), TotalVeins))
 
     #Sanity check mask to ensure veins are at least 1-cell wide (otherwise they wouldn't exist)
     mask = VeinFiles<1
@@ -456,7 +577,7 @@ def stomatagenesis(VeinMu, VeinVar, MesoWgt, MesoVar, SigMaxV, SigMaxM, SigVar, 
             if (State==0):
                 SFfate=coin(Pr)
                 if SFfate==1:
-                    NewState=np.round(np.random.normal(SFMu, SFVar, 1))[0]
+                    NewState=np.round(np.random.normal(SFMu, np.sqrt(SFVar), 1))[0]
                     Vein_filemap.iloc[i,3]=NewState
 
             #Now with memories created, leverage these files to produce a wave of derivatives...
@@ -477,10 +598,13 @@ def stomatagenesis(VeinMu, VeinVar, MesoWgt, MesoVar, SigMaxV, SigMaxM, SigVar, 
     VFs=np.where(Vein_filemap['Identity']=='Vein')
     MFs=np.where(Vein_filemap['Identity']=='Meso')
 
+    #Critical sanity check to prevent generation of negative widths when initializing scaling of vein and mesophyll cells
+    VFwid_coarse=np.round(np.random.normal(VeinFileWid[0], np.sqrt(VeinFileWid[1]), 1000))
+    VFwid=np.random.choice(VFwid_coarse, len(VFs[0]))
 
-    VFwid=np.round(np.random.normal(VeinFileWid[0], VeinFileWid[1], len(VFs[0])),2)
-    MFwid=np.round(np.random.normal(MesoFileWid[0], MesoFileWid[1], len(MFs[0])),2)
-
+    MFwid_coarse=np.round(np.random.normal(MesoFileWid[0], np.sqrt(MesoFileWid[1]), 1000))
+    MFwid=np.random.choice(MFwid_coarse, len(MFs[0]))
+    
     Filewidths[VFs]=VFwid; Filewidths[MFs]=MFwid
     Filewidths
     CumFilewidths=np.cumsum(Filewidths)-Filewidths
@@ -696,17 +820,22 @@ def stomatagenesis(VeinMu, VeinVar, MesoWgt, MesoVar, SigMaxV, SigMaxM, SigVar, 
                 xwin1=np.where((x>=GC1x[0]) & (x < GC1x[1])); ywin1=np.where((y>=GC1y[0]) & (y < GC1y[1]))
                 xwin2=np.where((x>=GC2x[0]) & (x < GC2x[1])); ywin2=np.where((y>=GC2y[0]) & (y < GC2y[1]))
 
-                z1=np.ravel(z_avg[ywin1[0][0]:ywin1[0][-1]+1, xwin1[0][0]:xwin1[0][-1]+1])
-                z2=np.ravel(z_avg[ywin2[0][0]:ywin2[0][-1]+1, xwin2[0][0]:xwin2[0][-1]+1])
+                try:
+                    z1=np.ravel(z_avg[ywin1[0][0]:ywin1[0][-1]+1, xwin1[0][0]:xwin1[0][-1]+1])
+                    z2=np.ravel(z_avg[ywin2[0][0]:ywin2[0][-1]+1, xwin2[0][0]:xwin2[0][-1]+1])
 
-                SCS1=np.round(np.sum(z1[z1>z_baseline])/len(z1),3); SCS2=np.round(np.sum(z2[z2>z_baseline])/len(z2),3)
+                    SCS1=np.round(np.sum(z1[z1>z_baseline])/len(z1),3); SCS2=np.round(np.sum(z2[z2>z_baseline])/len(z2),3)
 
-                if SCS1<SCS2:
-                    fp, dp = GCpos.iloc[GCpairs[j][0],0:2]
-                else:
-                    fp, dp = GCpos.iloc[GCpairs[j][1],0:2]
+                    if SCS1<SCS2:
+                        fp, dp = GCpos.iloc[GCpairs[j][0],0:2]
+                    else:
+                        fp, dp = GCpos.iloc[GCpairs[j][1],0:2]
 
-                Fatemap3.loc[(Fatemap3['File'] == fp) & (Fatemap3['Deriv'] == dp) & (Fatemap3['Fate'] == 1), 'Fate']=0.75
+                    Fatemap3.loc[(Fatemap3['File'] == fp) & (Fatemap3['Deriv'] == dp) & (Fatemap3['Fate'] == 1), 'Fate']=0.75
+                except:
+                    print('Subsidiary sanity check error')
+                    print('xwins: ', xwin1, xwin2)
+                    print('ywins: ', ywin1, ywin2)
 
     return Fatemap3
 
