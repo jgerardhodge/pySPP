@@ -165,8 +165,8 @@ def stomata_FSC(obsZ, ang=False):
 
 def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False):
 
-    KDDy=NNSeries['dist_xdiff']
-    KDDx=NNSeries['dist_ydiff']
+    KDDy=NNSeries['NN_dist_xdiff']
+    KDDx=NNSeries['NN_dist_ydiff']
 
     kde = gaussian_kde(np.vstack([KDDx, KDDy]))
 
@@ -189,7 +189,7 @@ def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plo
 
         NNcols=[(1,0,0),(0.9,0.75,0.05), (0.2, 0.8,0.1), (0,0.2,0.8), (0,0.1,0.6)]
         for i in range(rankno, 0, -1):
-            ax1.plot(NNSeries[NNSeries['NN_rank']==i]['dist_xdiff'], NNSeries[NNSeries['NN_rank']==i]['dist_ydiff'], '.', color=NNcols[i-1])
+            ax1.plot(NNSeries[NNSeries['NN_rank']==i]['NN_dist_xdiff'], NNSeries[NNSeries['NN_rank']==i]['NN_dist_ydiff'], '.', color=NNcols[i-1])
 
         ax1.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
 
@@ -215,9 +215,9 @@ def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plo
 
 def stomata_rankedNN_biodock(biodock_SCs, rankedNNs, distance='M', rankno=5):
     
-    Genoname=np.unique(cur_geno_rep_FOV['Genotype'])[0]
-    Repname=np.unique(cur_geno_rep_FOV['Replicate'])[0] 
-    FOVname=np.unique(cur_geno_rep_FOV['Replicate'])[0]
+    Genoname=np.unique(biodock_SCs['Genotype'])[0]
+    Repname=np.unique(biodock_SCs['Replicate'])[0] 
+    FOVname=np.unique(biodock_SCs['FOV'])[0]
     
     if distance=='M':
     
@@ -225,25 +225,26 @@ def stomata_rankedNN_biodock(biodock_SCs, rankedNNs, distance='M', rankno=5):
             dx=np.round(np.abs(biodock_SCs.iloc[:,5]-biodock_SCs.iloc[i,5])); 
             dy=np.round(np.abs(biodock_SCs.iloc[:,6]-biodock_SCs.iloc[i,6])); 
 
-            Dm=dx+dy
-            Dmr=np.sort(Dm)
+            D=np.array(dx+dy)
+            Dr=np.argsort(D)
 
             for j in range(1,rankno+1):
-                NNm=biodock_SCs.iloc[np.where(Dm==Dmr[j])[0][0],]
-                data={'Genotype': Genoname, 'Replicate': Repname, 'FOV': FOVname, 'Current_SC': i, 'MNN_rank': j, 'Manhat_dist':Dmr[j], 'Origin_X': biodock_SCs.iloc[i,5], 'Origin_Y': biodock_SCs.iloc[i,6], 'MNN_x': NNm[5],  'MNN_y': NNm[6], 'Manhat_dist_xdiff': np.round(NNm[5]-biodock_SCs.iloc[i,5],2), 'Manhat_dist_ydiff': np.round(NNm[6]-biodock_SCs.iloc[i,6],2)}
+                NN=biodock_SCs.iloc[Dr[j],]
+                data={'Genotype': Genoname, 'Replicate': Repname, 'FOV': FOVname, 'Current_SC': i, 'NN_rank': j, 'NN_dist':D[Dr[j]], 'Origin_X': biodock_SCs.iloc[i,5], 'Origin_Y': biodock_SCs.iloc[i,6], 'NN_x': NN[5],  'NN_y': NN[6], 'NN_dist_xdiff': np.round(NN[5]-biodock_SCs.iloc[i,5],2), 'NN_dist_ydiff': np.round(NN[6]-biodock_SCs.iloc[i,6],2)}
                 rankedNNs.loc[len(rankedNNs)] = data
+
     elif distance=='E':
 
         for i in range(0,len(SCs)):
             dx=np.round(np.square(biodock_SCs.iloc[:,5]-biodock_SCs.iloc[i,5])); 
             dy=np.round(np.square(biodock_SCs.iloc[:,6]-biodock_SCs.iloc[i,6])); 
 
-            Dm=np.sqrt(dx+dy)
-            Dmr=np.sort(Dm)
+            D=np.array(dx+dy)
+            Dr=np.argsort(D)
 
             for j in range(1,rankno+1):
-                NNm=biodock_SCs.iloc[np.where(Dm==Dmr[j])[0][0],]
-                data={'Genotype': Genoname, 'Replicate': Repname, 'FOV': FOVname, 'Current_SC': i, 'MNN_rank': j, 'Manhat_dist':Dmr[j], 'Origin_X': biodock_SCs.iloc[i,5], 'Origin_Y': biodock_SCs.iloc[i,6], 'MNN_x': NNm[5],  'MNN_y': NNm[6], 'Manhat_dist_xdiff': np.round(NNm[5]-biodock_SCs.iloc[i,5],2), 'Manhat_dist_ydiff': np.round(NNm[6]-biodock_SCs.iloc[i,6],2)}
+                NN=biodock_SCs.iloc[Dr[j],]
+                data={'Genotype': Genoname, 'Replicate': Repname, 'FOV': FOVname, 'Current_SC': i, 'NN_rank': j, 'NN_dist':D[Dr[j]], 'Origin_X': biodock_SCs.iloc[i,5], 'Origin_Y': biodock_SCs.iloc[i,6], 'NN_x': NN[5],  'NN_y': NN[6], 'NN_dist_xdiff': np.round(NN[5]-biodock_SCs.iloc[i,5],2), 'NN_dist_ydiff': np.round(NN[6]-biodock_SCs.iloc[i,6],2)}
                 rankedNNs.loc[len(rankedNNs)] = data
     else:
         print('Distance method supplied not recognized. Present options are \'M\' for Manhattan (Default) and \'E\' for Euclidean.')
@@ -297,10 +298,10 @@ def stomata_KDD_rorshach(Z, plotting=False):
     return avgZ
 
 
-def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False):
+def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False, plotname='Plotname'):
 
-    KDDy=NNSeries['dist_xdiff']
-    KDDx=NNSeries['dist_ydiff']
+    KDDy=NNSeries['NN_dist_xdiff']
+    KDDx=NNSeries['NN_dist_ydiff']
 
     kde = gaussian_kde(np.vstack([KDDx, KDDy]))
 
@@ -325,7 +326,8 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         vert_p=vert_p+Z[:,i]
 
     if plotting==True:
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [8, 4], 'height_ratios': [8, 4]}, figsize=(12, 12))
+        plt.ioff()
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [8, 4], 'height_ratios': [4, 8]}, figsize=(12, 12))
         ax2.axis('off')
 
         #gs = fig.add_gridspec(2, 2, height_ratios=[1, 2], width_ratios=[2, 1])
@@ -352,6 +354,9 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         im = ax3.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
         ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
 
+        if plotname!='Plotname':
+            plt.savefig(plotname+'.pdf', format='pdf', bbox_inches='tight')
+
     return hori_p, vert_p
 
 def stomata_rankedNN(Fatemap, rankedNNs, Rep='NA', distance='M', rankno=5):
@@ -375,7 +380,7 @@ def stomata_rankedNN(Fatemap, rankedNNs, Rep='NA', distance='M', rankno=5):
 
                 for j in range(1,rankno+1):
                     NNm=SCs.iloc[np.where(Dm==Dmr[j])[0][0],]
-                    data={'Rep': Rep, 'Current_SC': i, 'NN_rank': j, 'dist':Dmr[j], 'Origin_X': SCs.iloc[i,8], 'Origin_Y': SCs.iloc[i,9], 'NN_x': NNm[8],  'NN_y': NNm[9], 'dist_xdiff': np.round(NNm[8]-SCs.iloc[i,8],2), 'dist_ydiff': np.round(NNm[9]-SCs.iloc[i,9],2)}
+                    data={'Rep': Rep, 'Current_SC': i, 'NN_rank': j, 'NN_dist':Dmr[j], 'Origin_X': SCs.iloc[i,8], 'Origin_Y': SCs.iloc[i,9], 'NN_x': NNm[8],  'NN_y': NNm[9], 'NN_dist_xdiff': np.round(NNm[8]-SCs.iloc[i,8],2), 'NN_dist_ydiff': np.round(NNm[9]-SCs.iloc[i,9],2)}
                     rankedNNs.loc[len(rankedNNs)] = data
         elif distance=='E':
 
@@ -388,7 +393,7 @@ def stomata_rankedNN(Fatemap, rankedNNs, Rep='NA', distance='M', rankno=5):
 
                 for j in range(1,rankno+1):
                     NNm=SCs.iloc[np.where(Dm==Dmr[j])[0][0],]
-                    data={'Rep': Rep, 'Current_SC': i, 'MNN_rank': j, 'Manhat_dist':Dmr[j], 'Origin_X': SCs.iloc[i,8], 'Origin_Y': SCs.iloc[i,9], 'MNN_x': NNm[8],  'MNN_y': NNm[9], 'Manhat_dist_xdiff': np.round(NNm[8]-SCs.iloc[i,8],2), 'Manhat_dist_ydiff': np.round(NNm[9]-SCs.iloc[i,9],2)}
+                    data={'Rep': Rep, 'Current_SC': i, 'NN_rank': j, 'NN_dist':Dmr[j], 'Origin_X': SCs.iloc[i,8], 'Origin_Y': SCs.iloc[i,9], 'NN_x': NNm[8],  'NN_y': NNm[9], 'NN_dist_xdiff': np.round(NNm[8]-SCs.iloc[i,8],2), 'NN_dist_ydiff': np.round(NNm[9]-SCs.iloc[i,9],2)}
                     rankedNNs.loc[len(rankedNNs)] = data
         else:
             print('Distance method supplied not recognized. Present options are \'M\' for Manhattan (Default) and \'E\' for Euclidean.')
