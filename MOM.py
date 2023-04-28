@@ -97,9 +97,11 @@ def stomata_FSC(obsZ, ang=False):
 
     # Find the index of the maximum value in the subset of the array
     lindex = np.unravel_index(np.argmax(lhalf.values), lhalf.shape)
-
+    
     # Find the index of the maximum value in the subset of the array
     rindex = np.unravel_index(np.argmax(rhalf.values), rhalf.shape)
+
+    startindex=[lindex, rindex]
 
     bestm=np.abs((rindex[0]-lindex[0])/((100+rindex[1])-lindex[1]))
 
@@ -108,36 +110,38 @@ def stomata_FSC(obsZ, ang=False):
             RobsZ = ndimage.rotate(obsZ, ang)
 
             #Split Z frame observations on the x-origin
-            lhalf =pd.DataFrame(RobsZ).iloc[:,0:100]
-            rhalf =pd.DataFrame(RobsZ).iloc[:,101:200]
+            newlhalf =pd.DataFrame(RobsZ).iloc[:,0:100]
+            newrhalf =pd.DataFrame(RobsZ).iloc[:,101:200]
 
             # Find the index of the maximum value in the subset of the array
-            lindex = np.unravel_index(np.argmax(lhalf.values), lhalf.shape)
+            newlindex = np.unravel_index(np.argmax(newlhalf.values), newlhalf.shape)
 
             # Find the index of the maximum value in the subset of the array
-            rindex = np.unravel_index(np.argmax(rhalf.values), rhalf.shape)
+            newrindex = np.unravel_index(np.argmax(newrhalf.values), newrhalf.shape)
 
-            m=np.abs((rindex[0]-lindex[0])/((100+rindex[1])-lindex[1]))
+            m=np.abs((newrindex[0]-newlindex[0])/((100+newrindex[1])-newlindex[1]))
 
             if m<bestm:
                 bestm=m
                 best_ang=ang
+                newindex=[newlindex, newrindex]
 
     else:
         best_ang=ang
         RobsZ = ndimage.rotate(obsZ, ang)
 
         #Split Z frame observations on the x-origin
-        lhalf =pd.DataFrame(RobsZ).iloc[:,0:100]
-        rhalf =pd.DataFrame(RobsZ).iloc[:,101:200]
+        newlhalf =pd.DataFrame(RobsZ).iloc[:,0:100]
+        newrhalf =pd.DataFrame(RobsZ).iloc[:,101:200]
 
         # Find the index of the maximum value in the subset of the array
-        lindex = np.unravel_index(np.argmax(lhalf.values), lhalf.shape)
+        newlindex = np.unravel_index(np.argmax(newlhalf.values), newlhalf.shape)
 
         # Find the index of the maximum value in the subset of the array
-        rindex = np.unravel_index(np.argmax(rhalf.values), rhalf.shape)
+        newrindex = np.unravel_index(np.argmax(newrhalf.values), newrhalf.shape)
 
         bestm=np.abs((rindex[0]-lindex[0])/((100+rindex[1])-lindex[1]))
+        newindex=[newlindex, newrindex]
 
     print('Angle Correction = '+str(best_ang)+' degrees; Left-Right Peak slope = '+str(bestm))
 
@@ -161,8 +165,8 @@ def stomata_FSC(obsZ, ang=False):
     # Copy the subset of Z_rotated that matches the original shape to the resized array
     RobsZ = RobsZ[i_start:i_end, j_start:j_end]
     
-    return RobsZ
-
+    return RobsZ, startindex, newindex
+    
 def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False):
 
     KDDy=NNSeries['NN_dist_xdiff']
