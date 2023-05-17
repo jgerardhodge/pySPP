@@ -167,20 +167,38 @@ def stomata_FSC(obsZ, ang=False):
     
     return RobsZ, startindex, newindex
     
-def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False):
+def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, rankmethod='avgrank', plotting=False):
 
-    KDDy=NNSeries['NN_dist_xdiff']
-    KDDx=NNSeries['NN_dist_ydiff']
+    if not rankmethod=='avgrank' and not rankmethod=='currank':
+        raise ValueError('Error with the rank method called! For averaging the 1-N ranks call \"avgrank\" whereas for screening a particular rank relationship use \"currank\".')
 
-    kde = gaussian_kde(np.vstack([KDDx, KDDy]))
+    if rankmethod=='avgrank':
+        KDDy=NNSeries.loc[NNSeries['NN_rank']<=rankno]['NN_dist_xdiff']
+        KDDx=NNSeries.loc[NNSeries['NN_rank']<=rankno]['NN_dist_ydiff']
 
-    xmin, xmax = -xbound, xbound
-    ymin, ymax = -ybound, ybound
-    X, Y = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
-    positions = np.vstack([X.ravel(), Y.ravel()])
+        kde = gaussian_kde(np.vstack([KDDx, KDDy]))
 
-    # Evaluate the kernel density at each grid point
-    Z = np.reshape(kde(positions).T, Y.shape)
+        xmin, xmax = -xbound, xbound
+        ymin, ymax = -ybound, ybound
+        X, Y = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
+        positions = np.vstack([X.ravel(), Y.ravel()])
+
+        # Evaluate the kernel density at each grid point
+        Z = np.reshape(kde(positions).T, Y.shape)
+
+    elif rankmethod=='currank':
+        KDDy=NNSeries.loc[NNSeries['NN_rank']==rankno]['NN_dist_xdiff']
+        KDDx=NNSeries.loc[NNSeries['NN_rank']==rankno]['NN_dist_ydiff']
+
+        kde = gaussian_kde(np.vstack([KDDx, KDDy]))
+
+        xmin, xmax = -xbound, xbound
+        ymin, ymax = -ybound, ybound
+        X, Y = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
+        positions = np.vstack([X.ravel(), Y.ravel()])
+
+        # Evaluate the kernel density at each grid point
+        Z = np.reshape(kde(positions).T, Y.shape)
 
     if plotting==True:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
@@ -192,8 +210,12 @@ def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plo
         ax1.set_title('NN Distances')
 
         NNcols=[(1,0,0),(0.9,0.75,0.05), (0.2, 0.8,0.1), (0,0.2,0.8), (0,0.1,0.6)]
-        for i in range(rankno, 0, -1):
-            ax1.plot(NNSeries[NNSeries['NN_rank']==i]['NN_dist_xdiff'], NNSeries[NNSeries['NN_rank']==i]['NN_dist_ydiff'], '.', color=NNcols[i-1])
+        if rankmethod=='avgrank':
+            for i in range(rankno, 0, -1):
+                ax1.plot(NNSeries[NNSeries['NN_rank']==i]['NN_dist_xdiff'], NNSeries[NNSeries['NN_rank']==i]['NN_dist_ydiff'], '.', color=NNcols[i-1])
+        else:
+            for i in range(rankno, 0, -1):
+                ax1.plot(NNSeries[NNSeries['NN_rank']==rankno]['NN_dist_xdiff'], NNSeries[NNSeries['NN_rank']==rankno]['NN_dist_ydiff'], '.', color=NNcols[rankno-1])
 
         ax1.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
 
@@ -363,9 +385,9 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
 
     return hori_p, vert_p
 
-def stomata_rankedNN(Fatemap, rankedNNs, Rep='NA', distance='M', rankno=5):
+def stomata_rankedNN(Fatemap, rankedNNs, Rep='NA', distance='M', rankno=5, bounds=100):
 
-    InFOV=Fatemap[(Fatemap['X_center']>0) & (Fatemap['X_center']<800) & (Fatemap['Y_center']>0) & (Fatemap['Y_center']<800)]
+    InFOV=Fatemap[(Fatemap['X_center']>(0+bounds)) & (Fatemap['X_center']<(800-bounds)) & (Fatemap['Y_center']>(0+bounds)) & (Fatemap['Y_center']<(800-bounds))]
 
     SCs=InFOV[InFOV['Fate']==1]
 
