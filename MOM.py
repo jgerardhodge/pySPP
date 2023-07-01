@@ -14,7 +14,7 @@ def coin(p1):
     else:
         return 1
 
-def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks, plotting=False):
+def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks, plotting=False, filename=None):
 
     cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.45, 0.0, 0.0, 0.9, 1.0])
     cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
@@ -49,6 +49,9 @@ def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks, 
         im = ax3.imshow(diffZ, aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
         ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
 
+        if filename is not None:
+            plt.savefig(filename)
+            plt.close(fig)
 
     OEscore=np.round(np.sum(np.abs((obsZ/np.max(obsZ))-(modelZ/np.max(modelZ)))),3)
 
@@ -167,7 +170,7 @@ def stomata_FSC(obsZ, ang=False):
     
     return RobsZ, startindex, newindex
     
-def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, rankmethod='avgrank', plotting=False):
+def stomata_KDDs(NNSeries, xbound=100, ybound=100, ori_len=20, ori_wid=10, rankno=5, rankmethod='avgrank', plotting=False):
 
     if not rankmethod=='avgrank' and not rankmethod=='currank':
         raise ValueError('Error with the rank method called! For averaging the 1-N ranks call \"avgrank\" whereas for screening a particular rank relationship use \"currank\".')
@@ -239,38 +242,45 @@ def stomata_KDDs(NNSeries, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, ran
     
     return Z
 
-def stomata_rankedNN_biodock(biodock_SCs, rankedNNs, distance='M', rankno=5):
+def stomata_rankedNN(biodock_SCs,  distance='M', rankno=5):
     
+    rankedNNs=pd.DataFrame(columns=['Genotype', 'Fieldplot', 'Replicate', 'FOV', 'Current_SC', 'NN_rank', 'NN_dist', 'Origin_X', 'Origin_Y', 'NN_x', 'NN_y', 'NN_dist_xdiff', 'NN_dist_ydiff'])
+
+
     Genoname=np.unique(biodock_SCs['Genotype'])[0]
+    Fieldname=np.unique(biodock_SCs['Plots'])[0]
     Repname=np.unique(biodock_SCs['Replicate'])[0] 
     FOVname=np.unique(biodock_SCs['FOV'])[0]
     
+    x_series=np.array(biodock_SCs['x_center'])
+    y_series=np.array(biodock_SCs['y_center'])
+
     if distance=='M':
-    
+        
         for i in range(0,len(biodock_SCs)):
-            dx=np.round(np.abs(biodock_SCs.iloc[:,5]-biodock_SCs.iloc[i,5])); 
-            dy=np.round(np.abs(biodock_SCs.iloc[:,6]-biodock_SCs.iloc[i,6])); 
+            dx=np.round(np.abs(x_series-x_series[i])); 
+            dy=np.round(np.abs(y_series-y_series[i])); 
 
             D=np.array(dx+dy)
             Dr=np.argsort(D)
 
             for j in range(1,rankno+1):
                 NN=biodock_SCs.iloc[Dr[j],]
-                data={'Genotype': Genoname, 'Replicate': Repname, 'FOV': FOVname, 'Current_SC': i, 'NN_rank': j, 'NN_dist':D[Dr[j]], 'Origin_X': biodock_SCs.iloc[i,5], 'Origin_Y': biodock_SCs.iloc[i,6], 'NN_x': NN[5],  'NN_y': NN[6], 'NN_dist_xdiff': np.round(NN[5]-biodock_SCs.iloc[i,5],2), 'NN_dist_ydiff': np.round(NN[6]-biodock_SCs.iloc[i,6],2)}
+                data={'Genotype': Genoname, 'Fieldplot':Fieldname, 'Replicate': Repname, 'FOV': FOVname, 'Current_SC': i, 'NN_rank': j, 'NN_dist':D[Dr[j]], 'Origin_X': x_series[i], 'Origin_Y': y_series[i], 'NN_x': NN['x_center'],  'NN_y': NN['y_center'], 'NN_dist_xdiff': np.round(NN['x_center']-x_series[i],2), 'NN_dist_ydiff': np.round(NN['y_center']-y_series[i],2)}
                 rankedNNs.loc[len(rankedNNs)] = data
 
     elif distance=='E':
 
         for i in range(0,len(SCs)):
-            dx=np.round(np.square(biodock_SCs.iloc[:,5]-biodock_SCs.iloc[i,5])); 
-            dy=np.round(np.square(biodock_SCs.iloc[:,6]-biodock_SCs.iloc[i,6])); 
-
-            D=np.array(dx+dy)
+            dx=np.round(np.square(x_series-x_series[i])); 
+            dy=np.round(np.square(y_series-y_series[i]));
+            
+            D=np.sqrt(np.array(dx+dy))
             Dr=np.argsort(D)
 
             for j in range(1,rankno+1):
                 NN=biodock_SCs.iloc[Dr[j],]
-                data={'Genotype': Genoname, 'Replicate': Repname, 'FOV': FOVname, 'Current_SC': i, 'NN_rank': j, 'NN_dist':D[Dr[j]], 'Origin_X': biodock_SCs.iloc[i,5], 'Origin_Y': biodock_SCs.iloc[i,6], 'NN_x': NN[5],  'NN_y': NN[6], 'NN_dist_xdiff': np.round(NN[5]-biodock_SCs.iloc[i,5],2), 'NN_dist_ydiff': np.round(NN[6]-biodock_SCs.iloc[i,6],2)}
+                data={'Genotype': Genoname, 'Fieldplot':Fieldname, 'Replicate': Repname, 'FOV': FOVname, 'Current_SC': i, 'NN_rank': j, 'NN_dist':D[Dr[j]], 'Origin_X': x_series[i], 'Origin_Y': y_series[i], 'NN_x': NN['x_center'],  'NN_y': NN['y_center'], 'NN_dist_xdiff': np.round(NN['x_center']-x_series[i],2), 'NN_dist_ydiff': np.round(NN['y_center']-y_series[i],2)}
                 rankedNNs.loc[len(rankedNNs)] = data
     else:
         print('Distance method supplied not recognized. Present options are \'M\' for Manhattan (Default) and \'E\' for Euclidean.')
@@ -351,8 +361,10 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         hori_p=hori_p+Z[i,:]
         vert_p=vert_p+Z[:,i]
 
+    plt.ioff()
+
     if plotting==True:
-        plt.ioff()
+        
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [8, 4], 'height_ratios': [4, 8]}, figsize=(12, 12))
         ax2.axis('off')
 
@@ -380,57 +392,228 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         im = ax3.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
         ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
 
-        if plotname!='Plotname':
-            plt.savefig(plotname+'.pdf', format='pdf', bbox_inches='tight')
+    elif plotname!='Plotname':
+
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [8, 4], 'height_ratios': [4, 8]}, figsize=(12, 12))
+        ax2.axis('off')
+
+        #gs = fig.add_gridspec(2, 2, height_ratios=[1, 2], width_ratios=[2, 1])
+
+        #ax1 = fig.add_subplot(gs[0, 0])
+        #plt.figure(figsize=(8,4))
+        ax1.set_xlabel('Distance (um)')
+        ax1.set_ylabel('Average Prob.')
+        ax1.set_title('Horizontal NN Distances')
+        ax1.plot(hori_x, hori_p)
+
+        #ax4 = fig.add_subplot(gs[1, 1])
+        #plt.figure(figsize=(4,8))
+        ax4.set_xlabel('Average Prob.')
+        ax4.set_ylabel('Distance (um)')
+        ax4.set_title('Vertical NN Distances')
+        ax4.plot(vert_p, vert_y)
+
+        #ax3 = fig.add_subplot(gs[1, 0])
+        #plt.figure(figsize=(8,8))
+        ax3.set_xlabel('Distance (um)')
+        ax3.set_ylabel('Distance (um)')
+        ax3.set_title('NN Distances')
+        im = ax3.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+
+        plt.savefig(plotname+'.pdf', format='pdf', bbox_inches='tight')
+        plt.close()
 
     return hori_p, vert_p
 
-def stomata_rankedNN(Fatemap, rankedNNs, Rep='NA', distance='M', rankno=5, bounds=100):
 
-    InFOV=Fatemap[(Fatemap['X_center']>(0+bounds)) & (Fatemap['X_center']<(800-bounds)) & (Fatemap['Y_center']>(0+bounds)) & (Fatemap['Y_center']<(800-bounds))]
+def stomata_KDD_deriv_anno(NNSeries, vp_series, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False, plotname='Plotname'):
 
-    SCs=InFOV[InFOV['Fate']==1]
+    cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.45, 0.0, 0.0, 0.9, 1.0])
+    cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
+    cb=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.75, 0.75, 0.0, 0.1, 1.0])
 
-    if (SCs.shape[0]>=rankno*2):
-        
-        NNerrors=''
+    kde_colchan=np.vstack((cr, cg, cb)).T
+    kde_cmap=mcolors.ListedColormap(kde_colchan)
 
-        if distance=='M':
+    #############################################################
+    # Calculate derivatives from the flattened KDD
+    #############################################################
 
-            for i in range(0,len(SCs)):
-                dx=np.round(np.abs(SCs.iloc[:,8]-SCs.iloc[i,8])); 
-                dy=np.round(np.abs(SCs.iloc[:,9]-SCs.iloc[i,9])); 
+    for i in range(0,200):
+        dy_dx = np.gradient(vp_series, np.arange(0,200))
 
-                Dm=dx+dy
-                Dmr=np.sort(Dm)
+        # Calculate the second derivative
+        d2y_dx2 = np.gradient(dy_dx, np.arange(0,200))
 
-                for j in range(1,rankno+1):
-                    NNm=SCs.iloc[np.where(Dm==Dmr[j])[0][0],]
-                    data={'Rep': Rep, 'Current_SC': i, 'NN_rank': j, 'NN_dist':Dmr[j], 'Origin_X': SCs.iloc[i,8], 'Origin_Y': SCs.iloc[i,9], 'NN_x': NNm[8],  'NN_y': NNm[9], 'NN_dist_xdiff': np.round(NNm[8]-SCs.iloc[i,8],2), 'NN_dist_ydiff': np.round(NNm[9]-SCs.iloc[i,9],2)}
-                    rankedNNs.loc[len(rankedNNs)] = data
-        elif distance=='E':
+        # Calculate the third derivative
+        d3y_dx3 = np.gradient(d2y_dx2, np.arange(0,200))
 
-            for i in range(0,len(SCs)):
-                dx=np.round(np.square(SCs.iloc[:,8]-SCs.iloc[i,8])); 
-                dy=np.round(np.square(SCs.iloc[:,9]-SCs.iloc[i,9])); 
+    ###############################################################################################
+    # Use attributes of the KDD distribution and its 2nd Deriv's to identify features of interest
+    ###############################################################################################
 
-                Dm=np.sqrt(dx+dy)
-                Dmr=np.sort(Dm)
+    origin=np.where(vp_series==np.max(vp_series))[0][0]
 
-                for j in range(1,rankno+1):
-                    NNm=SCs.iloc[np.where(Dm==Dmr[j])[0][0],]
-                    data={'Rep': Rep, 'Current_SC': i, 'NN_rank': j, 'NN_dist':Dmr[j], 'Origin_X': SCs.iloc[i,8], 'Origin_Y': SCs.iloc[i,9], 'NN_x': NNm[8],  'NN_y': NNm[9], 'NN_dist_xdiff': np.round(NNm[8]-SCs.iloc[i,8],2), 'NN_dist_ydiff': np.round(NNm[9]-SCs.iloc[i,9],2)}
-                    rankedNNs.loc[len(rankedNNs)] = data
-        else:
-            print('Distance method supplied not recognized. Present options are \'M\' for Manhattan (Default) and \'E\' for Euclidean.')
-            
+    dd_Lscree=np.where(d2y_dx2==np.max(d2y_dx2[np.arange(0,origin)]))[0][0]
+    dd_Rscree=np.where(d2y_dx2==np.max(d2y_dx2[np.arange(origin,200)]))[0][0]
 
-        return NNerrors, rankedNNs 
-    else:
+    Lsierras=vp_series[np.arange(0, dd_Lscree)]
+    Rsierras=vp_series[np.arange(dd_Rscree, 200)]
 
-        NNerrors='NNs_scarce_fatal_run'
+    dd_Lsierras=d2y_dx2[np.arange(0, dd_Lscree)]
+    dd_Rsierras=d2y_dx2[np.arange(dd_Rscree,200)]
 
-        return NNerrors, rankedNNs
+    Lpeak=np.where(vp_series==Lsierras[np.where(dd_Lsierras==np.min(dd_Lsierras))[0][0]])[0][0]
+    Rpeak=np.where(vp_series==Rsierras[np.where(dd_Rsierras==np.min(dd_Rsierras))[0][0]])[0][0]
+
+    Lvalley=vp_series[np.arange(Lpeak, dd_Lscree)]
+    Rvalley=vp_series[np.arange(dd_Rscree, Rpeak)]
+
+    Ltrench=np.arange(Lpeak, dd_Lscree)[np.where(Lvalley==np.min(Lvalley))[0][0]]
+    Rtrench=np.arange(dd_Rscree, Rpeak)[np.where(Rvalley==np.min(Rvalley))[0][0]]
+
+    #Take scree slope positions between off file peaks and their trenches
+    Lpeak_scree=np.arange(Lpeak,Ltrench)
+    Rpeak_scree=np.arange(Rtrench,Rpeak)
+
+    #Take the probabilities between the off file peaks and their trenches along the scree positions
+    Lpeak_scree_p=vp_series[Lpeak_scree]
+    Rpeak_scree_p=vp_series[Rpeak_scree]
+
+    #Normalize the probabilities so that the peak is now 1 and the trench is now zero
+    Normalized_Lscree=(Lpeak_scree_p-np.min(Lpeak_scree_p))/(np.max(Lpeak_scree_p)-np.min(Lpeak_scree_p))
+    Normalized_Rscree=(Rpeak_scree_p-np.min(Rpeak_scree_p))/(np.max(Rpeak_scree_p)-np.min(Rpeak_scree_p))
+
+    #Subtract this normalized probability series by 0.5 to identify the halfway point between the peak and the trench
+    L_halfindex=np.where(np.diff(np.sign(Normalized_Lscree-0.5)))[0][0]
+    R_halfindex=np.where(np.diff(np.sign(Normalized_Rscree-0.5)))[0][0]
+
+    #Identify where in the off file scree slopes these halfway probabilities are passed as a estimate how far trenches span
+    Ltrench_span=np.abs(Lpeak_scree[L_halfindex]-Ltrench)
+    Rtrench_span=np.abs(Rpeak_scree[R_halfindex]-Rtrench)
+
+    #Calculate probabilities of trenches, peaks, and the origin
+    LTprob=vp_series[Ltrench]
+    LPprob=vp_series[Lpeak]
+
+    RTprob=vp_series[Rtrench]
+    RPprob=vp_series[Rpeak]
+
+    oriprob=vp_series[origin]
+
+    ########################################################
+    #Estimate Quantitative traits from these metrics
+    ########################################################
+    
+    origin_trench_dist=np.mean([np.abs(origin-Ltrench), np.abs(origin-Rtrench)])
+    origin_peak_dist=np.mean([np.abs(origin-Lpeak), np.abs(origin-Rpeak)])
+    trench_wid=np.mean([Ltrench_span*2, Rtrench_span*2])
+    trenchprob_FC=np.round(np.mean([(LTprob-oriprob)/oriprob,(RTprob-oriprob)/oriprob]),3)
+    Peaksprob_FC=np.round(np.mean([(LPprob-oriprob)/oriprob,(RPprob-oriprob)/oriprob]),3)
+
+    monofile_p=np.mean(vp_series[np.arange(origin-5, origin+5)])
+    tandfile_p=np.mean([vp_series[np.arange(origin-30,origin-25)],vp_series[g][np.arange(origin+25,origin+30)]])
+    
+
+    ################################################################
+    #Generate a plot of the vertical KDDs and their 2nd Derivatives
+    ################################################################
+
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
+
+    ################################################################
+    #The initial Vertical KDD distribution
+    ################################################################
+
+    #Plot the vertical KDD distribution
+    ax1.plot(vp_series,np.arange(0,200))
+
+    #Plot the origin
+    ax1.axhline(origin, color='blue', linestyle='-')
+
+    #Scree slopes defined by the maximum inflection point from the origin on either side 
+    #ax1.axhline(dd_Lscree, color='red', linestyle=':')
+    #ax1.axhline(dd_Rscree, color='red', linestyle=':')
+
+    #Plot the off file peaks 
+    ax1.axhline(Lpeak, color='green', linestyle='-')
+    ax1.axhline(Rpeak, color='green', linestyle='-')
+
+    #Plot the probability trench straddling the origin and off file peaks
+    ax1.axhline(Ltrench-Ltrench_span, color='red', linestyle=':')
+    ax1.axhline(Ltrench, color='red', linestyle='--')
+    ax1.axhline(Ltrench+Ltrench_span, color='red', linestyle=':')
+
+    ax1.axhline(Rtrench-Rtrench_span, color='red', linestyle=':')
+    ax1.axhline(Rtrench, color='red', linestyle='--')
+    ax1.axhline(Rtrench+Rtrench_span, color='red', linestyle=':')
+    ax1.set_xlabel('Probabilities')
+    ax1.set_ylabel('Distance (um)')
+    ax1.set_title('Vertically Collated KDD probabilities')
+
+    ################################################################
+    # Second Derivative of the Vertical KDD distribution
+    ################################################################
+
+    #Plot the 2nd derivatives
+    ax2.plot(d2y_dx2,np.arange(0,200))
+
+    #Plot the origin
+    ax2.axhline(origin, color='blue', linestyle='-')
+
+    #Plot the off file peaks 
+    ax2.axhline(Lpeak, color='green', linestyle='-')
+    ax2.axhline(Rpeak, color='green', linestyle='-')
+
+    #Plot the probability trench straddling the origin and off file peaks
+    ax2.axhline(Ltrench-Ltrench_span, color='red', linestyle=':')
+    ax2.axhline(Ltrench, color='red', linestyle='--')
+    ax2.axhline(Ltrench+Ltrench_span, color='red', linestyle=':')
+
+    ax2.axhline(Rtrench-Rtrench_span, color='red', linestyle=':')
+    ax2.axhline(Rtrench, color='red', linestyle='--')
+    ax2.axhline(Rtrench+Rtrench_span, color='red', linestyle=':')
+    ax2.set_xlabel('Derivatives')
+    ax2.set_ylabel('Distance (um)')
+    ax2.set_title('Second derivative of Vertically Collated KDD probabilities')
+
+    ########################################################################
+    # Superimpose the regions identified onto the KDD for visual assessment
+    ########################################################################    
+
+    ax3.set_xlabel('Distance (um)')
+    ax3.set_ylabel('Distance (um)')
+    ax3.set_title('NN Distances')
+
+    im = plt.imshow(obsZ/np.max(obsZ), aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap=kde_cmap)
+
+    #Plot the origin
+    ax3.axhline(np.arange(-200,200,2)[origin], color='blue', linestyle='-')
+
+    #Plot the off file peaks 
+    ax3.axhline(np.arange(-200,200,2)[Lpeak], color='green', linestyle='-')
+    ax3.axhline(np.arange(-200,200,2)[Rpeak], color='green', linestyle='-')
+
+    #Plot the probability trench straddling the origin and off file peaks
+    ax3.axhline(np.arange(-200,200,2)[Ltrench-Ltrench_span], color='red', linestyle=':')
+    ax3.axhline(np.arange(-200,200,2)[Ltrench], color='red', linestyle='--')
+    ax3.axhline(np.arange(-200,200,2)[Ltrench+Ltrench_span], color='red', linestyle=':')
+
+    ax3.axhline(np.arange(-200,200,2)[Rtrench-Rtrench_span], color='red', linestyle=':')
+    ax3.axhline(np.arange(-200,200,2)[Rtrench], color='red', linestyle='--')
+    ax3.axhline(np.arange(-200,200,2)[Rtrench+Rtrench_span], color='red', linestyle=':')
+
+    ax3.fill([-obs_len, -obs_len, obs_len, obs_len], [-obs_wid, obs_wid, obs_wid, -obs_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+    fig.colorbar(im, ax=ax3)
+
+
+    return monofile_p, tandfile_p, origin_trench_dist, origin_peak_dist, trench_wid, trenchprob_FC, Peaksprob_FC
+
+
+
+
+
 
 def stomatagenesis(VeinMu, VeinVar, MesoWgt, MesoVar, SigMaxV, SigMaxM, SigVar, SFMu, SFVar, SFEntropy, VeinFileMu, VeinFileVar, MesoFileMu, MesoFileVar, CPLenMu, CPLenVar, CPLenCov, PLenMu, PLenVar, PLenCov, GCLenMu, GCLenVar, GCLenCov, AsymLenMu, AsymLenVar, AsymLenCov, Yskew=3):
     
