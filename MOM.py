@@ -331,6 +331,7 @@ def stomata_KDD_rorshach(Z, plotting=False):
         plt.figure(figsize=(8,8))
         plt.imshow(avgZ/np.max(avgZ))
 
+
     return avgZ
 
 
@@ -470,8 +471,26 @@ def stomata_KDD_deriv_anno(NNSeries, vp_series, Z, xbound, ybound, ori_len=20, o
     Lvalley=vp_series[np.arange(Lpeak, dd_Lscree)]
     Rvalley=vp_series[np.arange(dd_Rscree, Rpeak)]
 
-    Ltrench=np.arange(Lpeak, dd_Lscree)[np.where(Lvalley==np.min(Lvalley))[0][0]]
-    Rtrench=np.arange(dd_Rscree, Rpeak)[np.where(Rvalley==np.min(Rvalley))[0][0]]
+    #Run a simple heuristic along the length of the left or right scree slopes reaching out to the left or right
+    #peaks, when the descent shifts between steps from positive (descending) to negative (climbing) this will indicate
+    #a saddle in the distribution where the trench is located.
+
+    Lvalley_descent=[]
+    Rvalley_descent=[]
+
+    for step in np.arange(len(Lvalley)-1,0,-1):
+        Lvalley_descent.append(Lvalley[step]-Lvalley[step-1])
+
+    for step in np.arange(1, len(Rvalley), 1):
+        Rvalley_descent.append(Rvalley[step-1]-Rvalley[step])
+
+    #Find the saddle position in the heuristic series
+    Lvalley_pos=np.where(Lvalley_descent==np.min(Lvalley_descent))[0]
+    Rvalley_pos=np.where(Rvalley_descent==np.min(Rvalley_descent))[0]
+
+    #Identify the position in the overall distribution the saddle corresponds to
+    Ltrench=np.arange(dd_Lscree, Lpeak, -1)[Lvalley_pos][0]
+    Rtrench=np.arange(dd_Rscree, Rpeak, 1)[Rvalley_pos][0]
 
     #Take scree slope positions between off file peaks and their trenches
     Lpeak_scree=np.arange(Lpeak,Ltrench)
@@ -510,11 +529,7 @@ def stomata_KDD_deriv_anno(NNSeries, vp_series, Z, xbound, ybound, ori_len=20, o
     origin_peak_dist=np.mean([np.abs(origin-Lpeak), np.abs(origin-Rpeak)])
     trench_wid=np.mean([Ltrench_span*2, Rtrench_span*2])
     trenchprob_FC=np.round(np.mean([(LTprob-oriprob)/oriprob,(RTprob-oriprob)/oriprob]),3)
-    Peaksprob_FC=np.round(np.mean([(LPprob-oriprob)/oriprob,(RPprob-oriprob)/oriprob]),3)
-
-    monofile_p=np.mean(vp_series[np.arange(origin-5, origin+5)])
-    tandfile_p=np.mean([vp_series[np.arange(origin-30,origin-25)],vp_series[g][np.arange(origin+25,origin+30)]])
-    
+    Peaksprob_FC=np.round(np.mean([(LPprob-oriprob)/oriprob,(RPprob-oriprob)/oriprob]),3)   
 
     ################################################################
     #Generate a plot of the vertical KDDs and their 2nd Derivatives
@@ -586,7 +601,7 @@ def stomata_KDD_deriv_anno(NNSeries, vp_series, Z, xbound, ybound, ori_len=20, o
     ax3.set_ylabel('Distance (um)')
     ax3.set_title('NN Distances')
 
-    im = plt.imshow(obsZ/np.max(obsZ), aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap=kde_cmap)
+    im = plt.imshow(Z/np.max(Z), aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap=kde_cmap)
 
     #Plot the origin
     ax3.axhline(np.arange(-200,200,2)[origin], color='blue', linestyle='-')
@@ -604,11 +619,19 @@ def stomata_KDD_deriv_anno(NNSeries, vp_series, Z, xbound, ybound, ori_len=20, o
     ax3.axhline(np.arange(-200,200,2)[Rtrench], color='red', linestyle='--')
     ax3.axhline(np.arange(-200,200,2)[Rtrench+Rtrench_span], color='red', linestyle=':')
 
-    ax3.fill([-obs_len, -obs_len, obs_len, obs_len], [-obs_wid, obs_wid, obs_wid, -obs_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+    ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
     fig.colorbar(im, ax=ax3)
 
+    if plotting!=True:
+        plt.close()
 
-    return monofile_p, tandfile_p, origin_trench_dist, origin_peak_dist, trench_wid, trenchprob_FC, Peaksprob_FC
+    elif plotname!='Plotname':
+        plt.savefig(plotname+'.pdf', format='pdf', bbox_inches='tight')
+        plt.close()
+
+
+
+    return origin_trench_dist, origin_peak_dist, trench_wid
 
 
 
