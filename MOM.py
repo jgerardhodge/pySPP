@@ -631,7 +631,7 @@ def stomata_KDD_deriv_anno(NNSeries, vp_series, Z, xbound, ybound, ori_len=20, o
 
 
 
-    return origin_trench_dist, origin_peak_dist, trench_wid
+    return origin_trench_dist, origin_peak_dist, trench_wid, trenchprob_FC, Peaksprob_FC
 
 
 
