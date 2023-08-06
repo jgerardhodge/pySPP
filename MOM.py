@@ -353,9 +353,9 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
     kde_cmap=mcolors.ListedColormap(kde_colchan)
 
     hori_p=np.zeros(Z.shape[0])
-    hori_x=range(0,Z.shape[0])
+    hori_x=np.arange(-xbound, xbound, (xbound*2)/Z.shape[0])
 
-    vert_y=range(0,Z.shape[1])
+    vert_y=np.arange(-ybound, ybound, (ybound*2)/Z.shape[1])
     vert_p=np.zeros(Z.shape[1])
 
     for i in range(0,Z.shape[0]):
