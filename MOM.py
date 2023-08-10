@@ -3,8 +3,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+from matplotlib.colors import Normalize
 from scipy.stats import gaussian_kde
 from scipy.stats import multivariate_normal
+from scipy.ndimage import rotate
 from scipy import ndimage
 
 def coin(p1):
@@ -286,6 +288,218 @@ def stomata_rankedNN(biodock_SCs,  distance='M', rankno=5):
         print('Distance method supplied not recognized. Present options are \'M\' for Manhattan (Default) and \'E\' for Euclidean.')
 
     return rankedNNs
+
+
+def stomata_KDD_rotate_symmetry(Z, xbound=100, ybound=100, interval=5, thresh=0.5, fastrun=True, plotting=False, plotname='Plotname'):
+
+    cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.35, 0.0, 0.0, 0.9, 1.0])
+    cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
+    cb=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.70, 0.75, 0.0, 0.1, 0.8])
+
+    kde_colchan=np.vstack((cr, cg, cb)).T
+    kde_cmap=mcolors.ListedColormap(kde_colchan)
+
+    symtab_colnames=('Rotation_angle', '5um', '10um', '15um', '20um', '25um', 
+                 '30um', '35um', '40um', '45um', '50um', '55um', '60um', '65um', '70um', '75um', '80um', '85um', '90um', '95um')
+
+    #Define the rotation angles in degrees which will be performed iteratively on the original KDD
+    angles=np.arange(0,-180,-5)
+
+    #Define the step interval to extract probabilities from following rotation
+    steps=np.arange(interval,xbound,interval)
+
+    #Define the extent of the x and y bounds
+    extent = [-xbound, xbound, -ybound, ybound]
+
+    #Define a variable to hold the symmetric probability differences across the steps for the given
+    #rotation angle
+    sym_prob_diffs=[]
+
+    for deg in angles:
+
+        #Rotate the 2D array, Z, which holds the KDD distribution by 'deg' degrees
+        frotZ = rotate(Z, angle=deg, reshape=False)
+
+        #If fastrun set to false perform the same rotation in the reverse direction by 'deg' degrees
+        if fastrun==False:
+            rrotZ = rotate(Z, angle=-deg, reshape=False)
+
+        #Define a variable to hold the symmetric probability differences across the steps for the given
+        #rotation angle
+        spd=[]
+
+        #Iterate across the 5-100um steps at a 5um window
+        for step in steps:
+
+            kernel_x=step
+            kernel_y=0
+
+            #Log transform the probabilities to ensure the values approaching zero near the edges of the KDD
+            #don't saturate the signal for the symmetric probability differences (SPD)
+
+            #Retrieve kernel probabilities
+            fl_pr=np.abs(frotZ[kernel_y+100, kernel_x+100])
+            fr_pr=np.abs(frotZ[100-kernel_y, 100-kernel_x])
+
+            # Transform
+            fl_pr = np.log(fl_pr)
+            fr_pr = np.log(fr_pr)
+
+            #Symmetric difference calc in reverse direction
+            forward_diff=np.abs((fl_pr-fr_pr)/(fl_pr+fr_pr))
+
+            #If fast run set to false symmetric probability difference becomes an average of the forward and reverse
+            #rotations
+            if fastrun==False:
+
+                #Retrieve kernel probabilities
+                rl_pr=np.abs(rrotZ[kernel_y+100, kernel_x+100])
+                rr_pr=np.abs(rrotZ[100-kernel_y, 100-kernel_x])
+
+                # Transform
+                rl_pr = np.log(rl_pr)
+                rr_pr = np.log(rr_pr)
+
+                #Symmetric difference calc in reverse direction
+                reverse_diff=np.abs((rl_pr-rr_pr)/(rl_pr+rr_pr))
+
+                #SPD becomes an average of the forward and reverse absolute differences
+                spd.append((forward_diff+reverse_diff)/2)
+
+            else:
+                #SPD becomes the absolute difference of the forward rotation direction
+                spd.append(forward_diff)   
+
+        sym_prob_diffs.append(spd)
+
+    #With symmetric differences calculated across all combinatorial rotations and window steps collate results into dataframe
+    SymDiff_array=pd.DataFrame(sym_prob_diffs)
+
+    SymDiff_array.insert(0, 'Rotation_angle', angles)
+    
+    SymDiff_array.columns=symtab_colnames
+
+    #If an output figure is desired to visually assess and cross reference run plotting functionality
+
+    if plotting==True:
+        rot45 = rotate(Z, angle=45, reshape=False)
+        rot90 = rotate(Z, angle=90, reshape=False)
+
+        fig, axes = plt.subplots(2, 2, figsize=(10,10))
+        ax1, ax2, ax3, ax4 = axes.ravel()
+
+        legend_index=[]
+        for angle in range(0, len(angles)):
+            outlier=np.max(np.abs(sym_prob_diffs[angle]))>thresh
+            if outlier==True:
+                ax1.plot(steps, sym_prob_diffs[angle])
+                legend_index.append(angle)
+
+        ax1.set_ylim(-0.5,1)
+        ax1.set_xlabel('Distance from Origin')
+        ax1.set_ylabel('Symmetric Difference in log(Pr)')
+        ax1.set_title('Symmetric Differences with Rotation Angle')
+        ax1.plot(steps, np.repeat(0, len(steps)), color='black', linestyle=':')
+        ax1.legend(labels=angles[legend_index], fontsize=6, ncol=4, loc='lower right')
+
+        ax2.imshow(Z, extent=extent, cmap=kde_cmap)
+        ax2.scatter(steps, np.repeat(0, len(steps)), marker='x', color='green')
+        ax2.scatter(-steps, np.repeat(0, len(steps)), marker='x', color='red')
+        ax2.set_xlim(-xbound,xbound)
+        ax2.set_ylim(-ybound,ybound)
+        ax2.set_xlabel('Distance')
+        ax2.set_ylabel('Distance')
+        ax2.set_title('Rotation angle: 0 degrees')
+
+        ax3.imshow(rot45, extent=extent, cmap=kde_cmap)
+        ax3.scatter(steps, np.repeat(0, len(steps)), marker='x', color='green')
+        ax3.scatter(-steps, np.repeat(0, len(steps)), marker='x', color='red')
+        ax3.set_xlim(-xbound,xbound)
+        ax3.set_ylim(-ybound,ybound)
+        ax3.set_xlabel('Distance')
+        ax3.set_ylabel('Distance')
+        ax3.set_title('Rotation angle: 45 degrees')
+
+        ax4.imshow(rot90, extent=extent, cmap=kde_cmap)
+        ax4.scatter(steps, np.repeat(0, len(steps)), marker='x', color='green')
+        ax4.scatter(-steps, np.repeat(0, len(steps)), marker='x', color='red')
+        ax4.set_xlim(-xbound,xbound)
+        ax4.set_ylim(-ybound,ybound)
+        ax4.set_xlabel('Distance')
+        ax4.set_ylabel('Distance')
+        ax4.set_title('Rotation angle: 90 degrees')
+
+        if plotname!='Plotname':
+            plt.savefig(plotname)
+            plt.close(fig)
+
+    return SymDiff_array
+
+def stomata_KDD_rotate_symmetry_stats(Z, xbound=100, ybound=100, angle=0, plotting=False, plotname='Plotname'):
+
+    cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.30, 0.1, 0.35, 0.95])
+    cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.3, 0.90])
+    cb=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.70, 0.7, 0.25, 0.10])
+
+    kde_colchan=np.vstack((cr, cg, cb)).T
+    kde_cmap=mcolors.ListedColormap(kde_colchan)
+
+    #Rotate the 2D array, Z, which holds the KDD distribution by 'deg' degrees
+    rotZ = rotate(Z, angle=angle, reshape=False)
+
+    left_half = np.flip(rotZ[:, :100])
+    right_half = rotZ[:, 100:]
+
+    consensus = ((left_half+right_half)-np.abs(right_half-left_half))**2
+    consensus = consensus/np.max(consensus)
+
+    squared_diff = (right_half - left_half)**2
+    dissonance = np.sqrt(squared_diff)/np.max(np.sqrt(squared_diff))
+    mean_diff = np.mean(squared_diff)
+    mirror_RMSD = np.sqrt(mean_diff)
+    RMSD=np.sum(mirror_RMSD)
+    CV=(np.std(squared_diff)/mean_diff)
+
+    if plotting==True:
+
+        fig, axes = plt.subplots(1, 5, figsize=(22,4))
+        ax1, ax2, ax3, ax4, ax5 = axes.ravel()
+        
+        norm = Normalize(vmin=0, vmax=1)
+        
+        im = plt.imshow(Z/np.max(Z), aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap=kde_cmap)
+        fig.colorbar(im, ax=ax1, norm=norm)
+        ax1.imshow(rotZ, aspect='auto', cmap=kde_cmap)
+        ax1.set_title('Rotated KDD')
+        
+        ax2.imshow(left_half, aspect='auto', cmap=kde_cmap)
+        ax2.set_title('KDD Left Face (Reversed)')
+        ax2.grid(True, color='white')
+        
+        ax3.imshow(right_half, aspect='auto', cmap=kde_cmap)
+        ax3.set_title('KDD Right Face')
+        ax3.grid(True, color='white')
+        
+        im4 = plt.imshow(consensus/np.max(consensus), aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap='magma')
+        fig.colorbar(im4, ax=ax4, norm=norm)
+        ax4.imshow(consensus/np.max(consensus), aspect='auto', cmap='magma')
+        ax4.set_title('Normalized Symmetry Signal')
+        ax4.grid(True, color='white')
+        
+        im5 = plt.imshow(dissonance, aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap='copper')
+        fig.colorbar(im5, ax=ax5)
+        ax5.imshow(dissonance, aspect='auto', cmap='copper')
+        ax5.set_title('Normalized Asymmetry Signal') #Formerly known as the Root Squared Difference
+        ax5.grid(True, color='white')
+
+        if plotname!='Plotname':
+            plt.savefig(plotname)
+            plt.close(fig)
+
+    if method=='RMSD':
+        return RMSD, CV
+    elif method=='PctError':
+        return MeanError, PctErr
 
 def stomata_KDD_rorshach(Z, plotting=False):
     ###############################
