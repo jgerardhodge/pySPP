@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.colors import Normalize
+from matplotlib.colors import LinearSegmentedColormap
 from scipy.stats import gaussian_kde
 from scipy.stats import multivariate_normal
 from scipy.ndimage import rotate
@@ -451,10 +452,15 @@ def stomata_KDD_rotate_symmetry_stats(Z, xbound=100, ybound=100, angle=0, plotti
     right_half = rotZ[:, 100:]
 
     consensus = ((left_half+right_half)-np.abs(right_half-left_half))**2
-    consensus = consensus/np.max(consensus)
-
+    conpeak = np.max(consensus)
+    #consensus = consensus/conpeak
+    
+    
     squared_diff = (right_half - left_half)**2
-    dissonance = np.sqrt(squared_diff)/np.max(np.sqrt(squared_diff))
+    dissonance = np.sqrt(squared_diff)
+    dispeak=np.max(dissonance)
+    #dissonance = dissonance/dispeak
+    
     mean_diff = np.mean(squared_diff)
     mirror_RMSD = np.sqrt(mean_diff)
     RMSD=np.sum(mirror_RMSD)
@@ -465,43 +471,200 @@ def stomata_KDD_rotate_symmetry_stats(Z, xbound=100, ybound=100, angle=0, plotti
         fig, axes = plt.subplots(1, 5, figsize=(22,4))
         ax1, ax2, ax3, ax4, ax5 = axes.ravel()
         
-        norm = Normalize(vmin=0, vmax=1)
+        norm = Normalize(vmin=0, vmax=0.3)
         
-        im = plt.imshow(Z/np.max(Z), aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap=kde_cmap)
+        im = plt.imshow(Z/np.max(Z), aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap='hot')
         fig.colorbar(im, ax=ax1, norm=norm)
-        ax1.imshow(rotZ, aspect='auto', cmap=kde_cmap)
-        ax1.set_title('Rotated KDD')
+        ax1.imshow(rotZ, aspect='auto', cmap='hot')
+        ax1.set_title('Normalized KDD')
         
-        ax2.imshow(left_half, aspect='auto', cmap=kde_cmap)
+        ax2.imshow(left_half, aspect='auto', cmap='hot')
         ax2.set_title('KDD Left Face (Reversed)')
         ax2.grid(True, color='white')
         
-        ax3.imshow(right_half, aspect='auto', cmap=kde_cmap)
+        ax3.imshow(right_half, aspect='auto', cmap='hot')
         ax3.set_title('KDD Right Face')
         ax3.grid(True, color='white')
         
-        im4 = plt.imshow(consensus/np.max(consensus), aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap='magma')
+        im4 = plt.imshow(consensus, aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap='bone')
         fig.colorbar(im4, ax=ax4, norm=norm)
-        ax4.imshow(consensus/np.max(consensus), aspect='auto', cmap='magma')
-        ax4.set_title('Normalized Symmetry Signal')
+        ax4.imshow(consensus, aspect='auto', cmap='bone')
+        ax4.set_title('Norm. Symmetry Signal (max='+str(np.round(conpeak,2))+')')
         ax4.grid(True, color='white')
         
+        
+        copper_cmap = plt.get_cmap('copper')
+        copper_cmap = plt.get_cmap('copper')
+        cmap_start=copper_cmap(0)
+        cmap_stop=copper_cmap(dispeak/0.4)
+        
+        cr=np.interp(np.linspace(0, 1, 256), [0.0, 1.0], [cmap_start[0], cmap_stop[0]])
+        cg=np.interp(np.linspace(0, 1, 256), [0.0, 1.0], [cmap_start[1], cmap_stop[1]])
+        cb=np.interp(np.linspace(0, 1, 256), [0.0, 1.0], [cmap_start[2], cmap_stop[2]])
+
+        asym_colchan=np.vstack((cr, cg, cb)).T
+        asym_cmap=mcolors.ListedColormap(asym_colchan)
+
         im5 = plt.imshow(dissonance, aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap='copper')
-        fig.colorbar(im5, ax=ax5)
-        ax5.imshow(dissonance, aspect='auto', cmap='copper')
-        ax5.set_title('Normalized Asymmetry Signal') #Formerly known as the Root Squared Difference
+        im5.norm.autoscale([0, 1])
+        colorbar = fig.colorbar(im5, ax=ax5) #,  extend='neither', ticks=np.linspace(0, dispeak, 6), boundaries=np.linspace(0, dispeak, 128))
+        tick_positions = np.linspace(0, 1, 6)
+        tick_labels = np.round(np.linspace(0, 0.4, 6),2)  # Format the labels as desired
+
+        # Set tick positions and labels on the color bar
+        colorbar.set_ticks(tick_positions)
+        colorbar.set_ticklabels(tick_labels)
+        
+        ax5.imshow(dissonance, aspect='auto', cmap=asym_cmap)
+        ax5.set_title('Norm. Asymmetry Signal (max='+str(np.round(dispeak,3))+')') #Formerly known as the Root Squared Difference
         ax5.grid(True, color='white')
 
         if plotname!='Plotname':
             plt.savefig(plotname)
             plt.close(fig)
 
-    if method=='RMSD':
-        return RMSD, CV
-    elif method=='PctError':
-        return MeanError, PctErr
+    return RMSD, CV
+
 
 def stomata_KDD_rorshach(Z, plotting=False):
+    ###############################
+    # Prospective Rorshach Function
+    ###############################
+
+    avgZ=Z.copy()
+
+    X=avgZ.shape[0]-1
+    Y=avgZ.shape[1]-1
+
+    for cx in np.arange(0,X):
+        for cy in np.arange(0,Y):
+
+            Q1=avgZ[cy, cx]
+            Q2=avgZ[cy, X-cx]
+            Q3=avgZ[Y-cy, cx]
+            Q4=avgZ[Y-cy, X-cx]
+            avgZ[cy, cx]=np.mean([Q1, Q2, Q3, Q4])
+
+    
+    if plotting==True:
+        plt.figure(figsize=(8,8))
+        plt.imshow(avgZ/np.max(avgZ))
+        
+    return avgZ
+
+
+def stomata_KDD_peak_spacing(Z, masking=0.5, bounds=20, method='IF', plotting=False):
+
+    #Make a copy of the Normalized Z which will now be a binary mask
+    Z_mask=Z.copy()
+
+
+    #Threshold the binary mask on the provided argument and set all values to 0/1
+    Z_mask[(Z_mask<masking)]=0.0
+    Z_mask[(Z_mask>masking)]=1
+
+    #Segment quadrants by defining all diagonals to 0, (shouldn't matter unless variance is high creating fusion events)
+    for v in range(len(Z)-1):
+        Z_mask[v, v] = 0
+        Z_mask[v, (len(Z)-1)-v] = 0
+
+    #Iterate through the binary mask and label each conterminous mask with an identifier, then generate a bounding box to measure it
+    labeled_array, num_labels = ndimage.label(Z_mask == 1)
+    bounding_boxes = ndimage.find_objects(labeled_array)
+
+    # Iterate over each patch
+    prob_len=[]
+    prob_wid=[]
+    prob_area=[]
+    cent_x=[]
+    cent_y=[]
+
+    #Iterate through each mask/bounding box identifier and collect their centroid coordinates, lengths, and widths
+    for label in range(1, num_labels + 1):  # Exclude background label 0
+        patch_slice = bounding_boxes[label - 1]  # Get the slice of the patch
+        patch = Z[patch_slice]  # Extract the patch from the array
+        patch_shape = patch.shape  # Get the shape of the patch
+
+        # Calculate centroid position
+        indices = np.indices(patch.shape)
+        cent_y.append(np.round((indices[0] * patch).sum() / patch.sum() + patch_slice[0].start)-100)
+        cent_x.append(np.round((indices[1] * patch).sum() / patch.sum() + patch_slice[1].start)-100)
+
+        # Calculate length and width
+        prob_len.append(patch_slice[1].stop - patch_slice[1].start)
+        prob_wid.append(patch_slice[0].stop - patch_slice[0].start)
+        prob_area.append(prob_len[-1]*prob_wid[-1])
+
+    #Rank order masks from greatest to least then retrieve indices for the top 4 (the primary peaks of interest)
+    prob_area_ranked=np.argsort(prob_area)[::-1]
+
+    if (method=='SP'):
+        mask_indices=prob_area_ranked[:4]
+    elif (method=='IF'):
+        mask_indices=prob_area_ranked[:2]
+
+    #Use the 4 peak indices to retrieve centroid locations as well as probability bounding box shape data
+    cent_x=np.array(cent_x)[mask_indices]
+    cent_y=np.array(cent_y)[mask_indices]
+    prob_len=np.array(prob_len)[mask_indices]
+    prob_wid=np.array(prob_wid)[mask_indices]
+
+    #Filter for mask centroids greater than a stomata complex away on the x-axis (in-file filter)
+    infile_indices=np.abs(cent_x)>bounds
+    cent_x_in=cent_x[infile_indices]
+    cent_y_in=cent_y[infile_indices]
+
+    #Retrieve the probability bounding box lengths, widths, and x-axis distances for the in-file peaks
+    infile_len=np.mean(np.array(prob_len)[infile_indices])
+    infile_wid=np.mean(np.array(prob_wid)[infile_indices])
+    infile_dist=np.mean(np.abs(np.array(cent_x)[infile_indices]))
+
+    if (method=='SP'):
+
+        #Filter for mask centroids greater than a stomata complex away on the y-axis (side peak filter)
+        sidepeak_indices=np.abs(cent_y)>bounds
+        cent_x_sp=cent_x[sidepeak_indices]
+        cent_y_sp=cent_y[sidepeak_indices]
+
+        if ((len(cent_x_sp)<2)):
+            print ('Iteration '+str(i)+' probable missing side peaks error.')
+            fig, axes = plt.subplots(1, 2, figsize=(8,4))
+            ax1, ax2 = axes.ravel()
+            ax1.imshow(Z)
+            ax1.set_title(i)
+            ax2.imshow(labeled_array)
+            plt.show()
+
+        #Retrieve the probability bounding box lengths, widths, and y-axis distances for the sidepeaks
+        sidepeak_len=np.mean(np.array(prob_len)[sidepeak_indices])
+        sidepeak_wid=np.mean(np.array(prob_wid)[sidepeak_indices])
+        sidepeak_dist=np.mean(np.abs(np.array(cent_y)[sidepeak_indices]))
+
+
+
+    if plotting==True:
+        fig, axes = plt.subplots(1, 2, figsize=(8,4))
+        ax1, ax2 = axes.ravel()
+        ax1.imshow(Z)
+        ax1.set_title(i)
+        ax2.imshow(labeled_array)
+
+        for n in range(len(cent_x_in)):
+            plt.scatter(100+cent_x_in[n], 100+cent_y_in[n], color=['red', 'darkred'][n])
+
+        if (method=='SP'):
+            for n in range(len(cent_x_sp)):
+                plt.scatter(100+cent_x_sp[n], 100+cent_y_sp[n], color=['green', 'teal'][n])
+
+        plt.show()
+        
+    if (method=='SP'):  
+        return infile_len, infile_wid, infile_dist, sidepeak_len, sidepeak_wid, sidepeak_dist 
+    elif (method=='IF'):
+        return infile_len, infile_wid, infile_dist
+
+
+def stomata_KDD_rorshach_old(Z, plotting=False):
     ###############################
     # Prospective Rorshach Function
     ###############################
