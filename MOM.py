@@ -20,10 +20,10 @@ def coin(p1):
 
 def stomata_rankedNN(sample_data,  distance='M', rankno=5):
 
-    geno=sample_data['Genotype'][0]
-    fld=sample_data['Fieldplot'][0]
-    rep=sample_data['Replicate'][0]
-    fov=sample_data['FOV'][0]
+    geno=np.unique(sample_data['Genotype'])[0]
+    fld=np.unique(sample_data['Fieldplot'])[0]
+    rep=np.unique(sample_data['Replicate'])[0]
+    fov=np.unique(sample_data['FOV'])[0]
 
     rankedNNs=pd.DataFrame(columns=['Genotype', 'Fieldplot', 'Replicate', 'FOV', 'Current_SC', 'NN_rank', 'NN_dist', 'Origin_X', 'Origin_Y', 'NN_x', 'NN_y', 'NN_dist_xdiff', 'NN_dist_ydiff'])
 
@@ -71,17 +71,17 @@ def stomata_rankedNN(sample_data,  distance='M', rankno=5):
         NN_xdiff=NN_x-ori_x
         NN_ydiff=NN_y-ori_y
 
-        cur_NN_out=pd.DataFrame({'Genotype': cg, 'Fieldplot': cp, 'Replicate': cr, 'FOV': cf, 'Current_SC': ci, 'NN_rank': NN_rank, 'NN_dist': NN_dist, 'Origin_X': ori_x, 'Origin_Y': ori_y, 'NN_x': NN_x,  'NN_y': NN_y, 'NN_dist_xdiff': NN_xdiff, 'NN_dist_ydiff': NN_ydiff})
+        NN_out=pd.DataFrame({'Genotype': cg, 'Fieldplot': cp, 'Replicate': cr, 'FOV': cf, 'Current_SC': ci, 'NN_rank': NN_rank, 'NN_dist': NN_dist, 'Origin_X': ori_x, 'Origin_Y': ori_y, 'NN_x': NN_x,  'NN_y': NN_y, 'NN_dist_xdiff': NN_xdiff, 'NN_dist_ydiff': NN_ydiff})
 
-        rankedNNs = pd.concat([rankedNNs, cur_NN_out], axis=0, ignore_index=True)
+        rankedNNs = pd.concat([rankedNNs, NN_out], axis=0, ignore_index=True)
 
-        return rankedNNs
+    return rankedNNs
 
 
-def plot_rankedNN(sample_data, ranked_NNs):
+def plot_rankedNN(sample_data, rankedNNs, rankno=5):
     
     # Create a figure and axis
-    fig, ax = plot.subplots(figsize=(8,7))
+    fig, ax = plt.subplots(figsize=(8,7))
 
     edge_colors=['red', 'orange', 'green', 'blue', 'navy']
 
@@ -113,7 +113,7 @@ def plot_rankedNN(sample_data, ranked_NNs):
     ax.set_ylabel('Medial Distance')
 
     # Show the plot
-    plot.show()
+    plt.show()
 
 
 def stomata_KDDs(NNSeries, xbound=100, ybound=100, ori_len=20, ori_wid=10, rankno=5, rankmethod='avgrank', plotting=False):
