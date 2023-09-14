@@ -20,6 +20,11 @@ def coin(p1):
 
 def stomata_rankedNN(sample_data,  distance='M', rankno=5):
 
+    geno=sample_data['Genotype'][0]
+    fld=sample_data['Fieldplot'][0]
+    rep=sample_data['Replicate'][0]
+    fov=sample_data['FOV'][0]
+
     rankedNNs=pd.DataFrame(columns=['Genotype', 'Fieldplot', 'Replicate', 'FOV', 'Current_SC', 'NN_rank', 'NN_dist', 'Origin_X', 'Origin_Y', 'NN_x', 'NN_y', 'NN_dist_xdiff', 'NN_dist_ydiff'])
 
     x_series=sample_data['x_center']
@@ -54,7 +59,7 @@ def stomata_rankedNN(sample_data,  distance='M', rankno=5):
         cur_NN=sample_data.iloc[rank_index,:]
 
         cg=np.repeat(geno, rankno)
-        cp=np.repeat(plt, rankno)
+        cp=np.repeat(fld, rankno)
         cr=np.repeat(rep, rankno)
         cf=np.repeat(fov, rankno)
         ci=np.repeat(np.where(coord_index==i)[0][0]+1, rankno)
