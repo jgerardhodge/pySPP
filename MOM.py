@@ -78,10 +78,15 @@ def stomata_rankedNN(sample_data,  distance='M', rankno=5):
     return rankedNNs
 
 
-def plot_rankedNN(sample_data, rankedNNs, rankno=5):
+def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512):
     
+    #Invert y-axis to mirror normal orientation for images
+    sample_data['y_center']=ylimit-sample_data['y_center']
+    rankedNNs['Origin_Y']=ylimit-rankedNNs['Origin_Y']
+    rankedNNs['NN_y']=ylimit-rankedNNs['NN_y']
+
     # Create a figure and axis
-    fig, ax = plt.subplots(figsize=(8,7))
+    fig, ax = plt.subplots(figsize=(6,5))
 
     edge_colors=['red', 'orange', 'green', 'blue', 'navy']
 
@@ -96,19 +101,19 @@ def plot_rankedNN(sample_data, rankedNNs, rankno=5):
         ax.fill([cent_x-ori_len, cent_x-ori_len, cent_x+ori_len, cent_x+ori_len], [cent_y-ori_wid, cent_y+ori_wid, cent_y+ori_wid, cent_y-ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
 
     #Plot arrows indicating rank ordered NN relationships between stomata
-    for rank in range(rankno,0,-1):
 
-        NN_edges=rankedNNs.loc[rankedNNs['NN_rank']==rank]
+    NN_edges=rankedNNs.loc[rankedNNs['NN_rank']==rank]
 
-        # Loop through the data and draw arrows
-        for i in range(len(NN_edges)):
-            ax.arrow(NN_edges.iloc[i,7], NN_edges.iloc[i,8], NN_edges.iloc[i,9]-NN_edges.iloc[i,7], NN_edges.iloc[i,10]-NN_edges.iloc[i,8], head_width=15, head_length=0, fc=edge_colors[rank-1], ec=edge_colors[rank-1])
+    # Loop through the data and draw arrows
+    for i in range(len(NN_edges)):
+        ax.arrow(NN_edges.iloc[i,7], NN_edges.iloc[i,8], NN_edges.iloc[i,9]-NN_edges.iloc[i,7], NN_edges.iloc[i,10]-NN_edges.iloc[i,8], linewidth=1.5, head_width=5, head_length=5, fc=edge_colors[rank-1], ec=edge_colors[rank-1])
 
     # Set axis limits
-    ax.set_xlim(0, 512)
-    ax.set_ylim(0, 512)
+    ax.set_xlim(0, xlimit)
+    ax.set_ylim(0, ylimit)
 
     # Set axis labels
+    ax.set_title('Rank '+str(rank)+' NN Associations')
     ax.set_xlabel('Longitudinal Distance')
     ax.set_ylabel('Medial Distance')
 
