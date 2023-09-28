@@ -80,10 +80,7 @@ def stomata_rankedNN(sample_data,  distance='M', rankno=5):
 
 def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512):
     
-    #Invert y-axis to mirror normal orientation for images
-    sample_data['y_center']=ylimit-sample_data['y_center']
-    rankedNNs['Origin_Y']=ylimit-rankedNNs['Origin_Y']
-    rankedNNs['NN_y']=ylimit-rankedNNs['NN_y']
+
 
     # Create a figure and axis
     fig, ax = plt.subplots(figsize=(6,5))
@@ -117,6 +114,9 @@ def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512):
     ax.set_xlabel('Longitudinal Distance')
     ax.set_ylabel('Medial Distance')
 
+    #Invert y-axis to mirror normal orientation for images
+    plt.gca().invert_yaxis()
+    
     # Show the plot
     plt.show()
 
@@ -194,7 +194,7 @@ def stomata_KDDs(NNSeries, xbound=100, ybound=100, ori_len=20, ori_wid=10, rankn
         ax2.set_xlabel('Distance (um)')
         ax2.set_ylabel('Distance (um)')
         ax2.set_title('NN Distances')
-        im = ax2.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        im = ax2.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno')
         ax2.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
 
         fig.colorbar(im, ax=ax2)
@@ -257,7 +257,7 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         ax3.set_xlabel('Distance (um)')
         ax3.set_ylabel('Distance (um)')
         ax3.set_title('NN Distances')
-        im = ax3.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        im = ax3.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno')
         ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
 
     elif plotname!='Plotname':
@@ -286,7 +286,7 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         ax3.set_xlabel('Distance (um)')
         ax3.set_ylabel('Distance (um)')
         ax3.set_title('NN Distances')
-        im = ax3.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        im = ax3.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno')
         ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
 
         plt.savefig(plotname+'.pdf', format='pdf', bbox_inches='tight')
