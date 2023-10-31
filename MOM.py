@@ -78,7 +78,7 @@ def stomata_rankedNN(sample_data,  distance='M', rankno=5):
     return rankedNNs
 
 
-def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512):
+def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512, bounds=None):
     
 
 
@@ -104,6 +104,11 @@ def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512):
     # Loop through the data and draw arrows
     for i in range(len(NN_edges)):
         ax.arrow(NN_edges.iloc[i,7], NN_edges.iloc[i,8], NN_edges.iloc[i,9]-NN_edges.iloc[i,7], NN_edges.iloc[i,10]-NN_edges.iloc[i,8], linewidth=1.5, head_width=5, head_length=5, fc=edge_colors[rank-1], ec=edge_colors[rank-1])
+
+    #Draw FOV North-West Rule Bounds if needed
+    if bounds!=None:
+        ax.fill([bounds, bounds, xlimit-bounds, xlimit-bounds], [bounds, ylimit-bounds, ylimit-bounds, bounds], linewidth=4, edgecolor='darkgray', facecolor=(0,0,0,0), linestyle='dotted')
+
 
     # Set axis limits
     ax.set_xlim(0, xlimit)
@@ -202,7 +207,7 @@ def stomata_KDDs(NNSeries, xbound=100, ybound=100, ori_len=20, ori_wid=10, rankn
     return Z
 
 
-def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False, plotname='Plotname'):
+def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False, plotname='Plotname', horimax=None, vertmax=None):
 
     KDDy=NNSeries['NN_dist_xdiff']
     KDDx=NNSeries['NN_dist_ydiff']
@@ -243,6 +248,8 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         ax1.set_xlabel('Distance (um)')
         ax1.set_ylabel('Average Prob.')
         ax1.set_title('Horizontal NN Distances')
+        if (horimax!=None):
+            ax1.set_ylim([np.min(hori_p),horimax])
         ax1.plot(hori_x, hori_p)
 
         #ax4 = fig.add_subplot(gs[1, 1])
@@ -250,6 +257,8 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         ax4.set_xlabel('Average Prob.')
         ax4.set_ylabel('Distance (um)')
         ax4.set_title('Vertical NN Distances')
+        if (vertmax!=None):
+            ax4.set_xlim([np.min(vert_p),vertmax])
         ax4.plot(vert_p, vert_y)
 
         #ax3 = fig.add_subplot(gs[1, 0])
@@ -272,6 +281,8 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         ax1.set_xlabel('Distance (um)')
         ax1.set_ylabel('Average Prob.')
         ax1.set_title('Horizontal NN Distances')
+        if (horimax!=None):
+            ax1.set_ylim([np.min(hori_p),horimax])
         ax1.plot(hori_x, hori_p)
 
         #ax4 = fig.add_subplot(gs[1, 1])
@@ -279,6 +290,8 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         ax4.set_xlabel('Average Prob.')
         ax4.set_ylabel('Distance (um)')
         ax4.set_title('Vertical NN Distances')
+        if (vertmax!=None):
+            ax4.set_xlim([np.min(vert_p),vertmax])
         ax4.plot(vert_p, vert_y)
 
         #ax3 = fig.add_subplot(gs[1, 0])
@@ -457,7 +470,7 @@ def stomata_KDD_deriv_anno(vp, Z, xbound, ybound, ori_len=20, ori_wid=10, plotti
     ax3.set_ylabel('Distance (um)')
     ax3.set_title('NN Distances')
 
-    im = plt.imshow(Z/np.max(Z), aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap=kde_cmap)
+    im = plt.imshow(Z/np.max(Z), aspect='auto', extent=[-xbound, xbound, -ybound, ybound], cmap='inferno')
 
     #Plot the origin
     ax3.axhline(ori_norm, color='blue', linestyle='-')
