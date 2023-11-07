@@ -234,9 +234,7 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         hori_p=hori_p+Z[i,:]
         vert_p=vert_p+Z[:,i]
 
-    plt.ioff()
-
-    if plotting==True:
+    if (plotting==True) & (plotname=='Plotname'):
         
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [8, 4], 'height_ratios': [4, 8]}, figsize=(12, 12))
         ax2.axis('off')
@@ -268,8 +266,9 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         ax3.set_title('NN Distances')
         im = ax3.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno')
         ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+        plt.show()
 
-    elif plotname!='Plotname':
+    elif (plotting==True) & (plotname!='Plotname'):
 
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [8, 4], 'height_ratios': [4, 8]}, figsize=(12, 12))
         ax2.axis('off')
