@@ -896,26 +896,44 @@ def stomata_KDD_rorshach(Z, plotting=False):
     # Prospective Rorshach Function
     ###############################
 
-    avgZ=Z.copy()
+    xlim=int(Z.shape[0])
+    ylim=int(Z.shape[1])
+    xcent=int((xlim/2))
+    ycent=int((ylim/2))
 
-    X=avgZ.shape[0]-1
-    Y=avgZ.shape[1]-1
+    #print(xlim, ylim)
+    #print(xcent, ycent)
 
-    for cx in np.arange(0,X):
-        for cy in np.arange(0,Y):
+    Zrorshach=Z.copy()
 
-            Q1=avgZ[cy, cx]
-            Q2=avgZ[cy, X-cx]
-            Q3=avgZ[Y-cy, cx]
-            Q4=avgZ[Y-cy, X-cx]
-            avgZ[cy, cx]=np.mean([Q1, Q2, Q3, Q4])
+    Zq1=Z[0:(ycent),xcent:(xlim+1)]
+    Zq2=Z[0:(ycent),0:(xcent)]
+    Zq3=Z[ycent:(ylim+1),0:(xcent)]
+    Zq4=Z[ycent:(ylim+1),xcent:(xlim+1)]
 
-    
+    #print(Zq1.shape,Zq2.shape,Zq3.shape,Zq4.shape)
+
+    #Flip inverted quadrants
+    Zq2_flip=np.flip(Zq2, axis=1)
+    Zq3_flip=np.flip(np.flip(Zq3, axis=0), axis=1)
+    Zq4_flip=np.flip(Zq4, axis=0)
+
+    Zqr1=(Zq1+Zq2_flip+Zq3_flip+Zq4_flip)/4
+    Zqr2=np.flip(Zqr1, axis=1)
+    Zqr3=np.flip(np.flip(Zqr1, axis=0), axis=1)
+    Zqr4=np.flip(Zqr1, axis=0)
+
+    Zrorshach[0:(ycent),xcent:(xlim+1)]=Zqr1
+    Zrorshach[0:(ycent),0:(xcent)]=Zqr2
+    Zrorshach[ycent:(ylim+1),0:(xcent)]=Zqr3
+    Zrorshach[ycent:(ylim+1),xcent:(xlim+1)]=Zqr4
+
     if plotting==True:
         plt.figure(figsize=(8,8))
-        plt.imshow(avgZ/np.max(avgZ))
+        plt.imshow(Zrorshach)
+        plt.colorbar()
         
-    return avgZ
+    return Zrorshach
 
 
 def stomata_KDD_peak_spacing(Zif, Zsp, xbound, ybound, masking_val=0.5, trench_thresh=25, buffer=5, plotting=False, plotname='Plotname'):
@@ -938,20 +956,36 @@ def stomata_KDD_peak_spacing(Zif, Zsp, xbound, ybound, masking_val=0.5, trench_t
     rows=np.arange(0,Z_mask.shape[0])
     midrow=Z_mask.shape[0]/2
 
-    if_mask=(rows < (midrow - trench_thresh)) | (rows > (midrow + trench_thresh))
-    Z_mask[if_mask]=0
+    # if_mask=(rows < (midrow - trench_thresh)) | (rows > (midrow + trench_thresh))
+    # Z_mask[if_mask]=0
+    # Z_mask[Z_mask>masking_val]=1
+    # Z_mask[Z_mask<masking_val]=0
+
+    if_y_mask=(rows < (midrow - trench_thresh)) | (rows > (midrow + trench_thresh))
+    if_x_mask=(rows < (midrow + buffer)) & (rows > (midrow - buffer))
+    Z_mask[if_y_mask,:]=0
+    Z_mask[:,if_x_mask]=0
     Z_mask[Z_mask>masking_val]=1
     Z_mask[Z_mask<masking_val]=0
-
 
     #Iterate through the binary mask and label each conterminous mask with an identifier, then generate a bounding box to measure it
     labeled_array_if, num_labels = ndimage.label(Z_mask == 1)
     bounding_boxes = ndimage.find_objects(labeled_array_if)
 
-    mask_sizes = np.bincount(labeled_array_if.ravel())[1:]  # Calculate sizes
-    sorted_labels = np.argsort(mask_sizes)[::-1]
-    primary_labels = sorted_labels[:2]
+    mask_sizes = np.bincount(labeled_array_if.ravel())  # Calculate sizes
+    sorted_labels = np.argsort(mask_sizes)[::-1]        # Identify the labels corresponding to each mask
+    primary_labels = sorted_labels[1:3]                 # Sort the labels to extract the 2nd and 3rd (i.e. two primary/non-background) masks
 
+    # Filter out the labels not in secondary_labels
+    fragment_if = sorted_labels[np.isin(sorted_labels, primary_labels, invert=True)]
+
+    # Set positions to zero in Z_mask if their mask is deemed a fragment
+    for fraglabel in fragment_if:
+        labeled_array_if[labeled_array_if == fraglabel] = 0
+
+
+    print('pl:', primary_labels)
+    
     for label in primary_labels:  # Exclude background label 0
 
         patch_slice = bounding_boxes[label - 1]  # Get the slice of the patch
@@ -987,17 +1021,26 @@ def stomata_KDD_peak_spacing(Zif, Zsp, xbound, ybound, masking_val=0.5, trench_t
     Z_mask2[Z_mask2>masking_val]=1
     Z_mask2[Z_mask2<masking_val]=0
 
-
     #Iterate through the binary mask and label each conterminous mask with an identifier, then generate a bounding box to measure it
     labeled_array_sp, num_labels = ndimage.label(Z_mask2 == 1)
     bounding_boxes = ndimage.find_objects(labeled_array_sp)
 
-    mask_sizes = np.bincount(labeled_array_sp.ravel())[1:]  # Calculate sizes
-    sorted_labels = np.argsort(mask_sizes)[::-1]
-    secondary_labels = sorted_labels[:2]
+    mask_sizes = np.bincount(labeled_array_sp.ravel())  # Calculate sizes
+    sorted_labels = np.argsort(mask_sizes)[::-1]        # Identify the labels corresponding to each mask
+    secondary_labels = sorted_labels[1:3]               # Sort the labels to extract the 2nd and 3rd (i.e. two primary/non-background) masks
 
+    # Filter out the labels not in secondary_labels
+    fragment_sf = sorted_labels[np.isin(sorted_labels, secondary_labels, invert=True)]
+    
+    # Set positions to zero in Z_mask2 if their mask is deemed a fragment
+    for fraglabel in fragment_sf:
+        labeled_array_sp[labeled_array_sp == fraglabel] = 0
+
+    print('sl:', secondary_labels)
+
+        
     for label in secondary_labels:  # Exclude background label 0
-        patch_slice = bounding_boxes[label]  # Get the slice of the patch
+        patch_slice = bounding_boxes[label - 1]  # Get the slice of the patch
         patch = Z_mask2[patch_slice]  # Extract the patch from the array
         patch_shape = patch.shape  # Get the shape of the patch
 
@@ -1051,54 +1094,6 @@ def stomata_KDD_peak_spacing(Zif, Zsp, xbound, ybound, masking_val=0.5, trench_t
 
     return infile_len, infile_wid, infile_area, infile_dist, sidepeak_len, sidepeak_wid, sidepeak_area, sidepeak_dist 
     
-
-
-def stomata_KDD_rorshach_old(Z, plotting=False):
-    ###############################
-    # Prospective Rorshach Function
-    ###############################
-
-    avgZ=Z.copy()
-
-    Xmid=avgZ.shape[0]/2
-    Ymid=avgZ.shape[1]/2
-
-    Xq1=np.arange(Xmid+1, (Xmid*2)+1, 1)-1
-    Yq1=np.arange(Ymid+1, (Ymid*2)+1, 1)-1
-
-    Xq2=np.arange(Xmid, Xmid-Xmid, -1)-1
-    Yq2=np.arange(Ymid+1, (Ymid*2)+1, 1)-1
-
-    Xq3=np.arange(Xmid, Xmid-Xmid, -1)-1
-    Yq3=np.arange(Ymid, Ymid-Ymid, -1)-1
-
-    Xq4=np.arange(Xmid+1, (Xmid*2)+1, 1)-1
-    Yq4=np.arange(Ymid, Ymid-Ymid, -1)-1
-
-    Quadrants=pd.DataFrame({'Q1x': Xq1, 'Q1y': Yq1, 'Q2x': Xq2, 'Q2y': Yq2, 'Q3x': Xq3, 'Q3y': Yq3, 'Q4x': Xq4, 'Q4y': Yq4})
-    Quadrants
-
-    for i in range(0, len(Quadrants)):
-
-        Q1_prob=avgZ[int(Xq1[i]),int(Yq1[i])]
-        Q2_prob=avgZ[int(Xq2[i]),int(Yq2[i])]
-        Q3_prob=avgZ[int(Xq3[i]),int(Yq3[i])]
-        Q4_prob=avgZ[int(Xq4[i]),int(Yq4[i])]
-        
-        quadavg=(Q1_prob+Q2_prob+Q3_prob+Q4_prob)/4
-        quadavg
-
-        avgZ[int(Xq1[i]),int(Yq1[i])]=quadavg
-        avgZ[int(Xq2[i]),int(Yq2[i])]=quadavg
-        avgZ[int(Xq3[i]),int(Yq3[i])]=quadavg
-        avgZ[int(Xq4[i]),int(Yq4[i])]=quadavg
-
-    if plotting==True:
-        plt.figure(figsize=(8,8))
-        plt.imshow(avgZ/np.max(avgZ))
-
-
-    return avgZ
 
 
 
