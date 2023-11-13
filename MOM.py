@@ -983,8 +983,6 @@ def stomata_KDD_peak_spacing(Zif, Zsp, xbound, ybound, masking_val=0.5, trench_t
     for fraglabel in fragment_if:
         labeled_array_if[labeled_array_if == fraglabel] = 0
 
-
-    print('pl:', primary_labels)
     
     for label in primary_labels:  # Exclude background label 0
 
@@ -1035,9 +1033,7 @@ def stomata_KDD_peak_spacing(Zif, Zsp, xbound, ybound, masking_val=0.5, trench_t
     # Set positions to zero in Z_mask2 if their mask is deemed a fragment
     for fraglabel in fragment_sf:
         labeled_array_sp[labeled_array_sp == fraglabel] = 0
-
-    print('sl:', secondary_labels)
-
+        
         
     for label in secondary_labels:  # Exclude background label 0
         patch_slice = bounding_boxes[label - 1]  # Get the slice of the patch
