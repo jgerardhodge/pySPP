@@ -78,7 +78,7 @@ def stomata_rankedNN(sample_data,  distance='M', rankno=5):
     return rankedNNs
 
 
-def stomata_nullNN(distance='M', rankno=5, orilen=20, oriwid=10, xlim=100, ylim=100, n=40, plotno=1, repno=1, techno=1):
+def stomata_nullNN(distance='M', rankno=5, ori_len=20, ori_wid=10, xlim=100, ylim=100, n=40, plotno=1, repno=1, techno=1):
 
     geno='Simulation'
     
@@ -130,17 +130,14 @@ def stomata_nullNN(distance='M', rankno=5, orilen=20, oriwid=10, xlim=100, ylim=
 
     Sim_coords=pd.DataFrame({'Genotype':geno_sim, 'Fieldplot': plot_sim, 'Replicate': rep_sim, 'FOV': fov_sim, 'Index': index_sim, 'x_center': xcenter_sim, 'y_center': ycenter_sim})
 
-    print(str(len(Sim_coords))+' artificial coordinates generated for null model...')
+    print(str(len(Sim_coords))+' artificial coordinates generated for null model... (NOTE: Given sufficient replication the next phase can take some time!)')
 
     nullNNs=pd.DataFrame(columns=['Genotype', 'Fieldplot', 'Replicate', 'FOV', 'Current_SC', 'NN_rank', 'NN_dist', 'Origin_X', 'Origin_Y', 'NN_x', 'NN_y', 'NN_dist_xdiff', 'NN_dist_ydiff'])
-
-    flds=np.unique(Sim_NNs['Fieldplot'])
-    reps=np.unique(Sim_NNs['Replicate'])
-    fovs=np.unique(Sim_NNs['FOV'])
     
     for fld in flds:
         for rep in reps:
             for fov in fovs:
+
                 Sim_img=Sim_coords.loc[(Sim_coords['Replicate']==rep) & (Sim_coords['FOV']==fov)]
                 x_series=Sim_img['x_center']
                 y_series=Sim_img['y_center']
@@ -627,28 +624,34 @@ def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks, 
     xmin, xmax = -xbound, xbound
     ymin, ymax = -ybound, ybound
 
-    diffZ=(obsZ/np.max(obsZ))-(modelZ/np.max(modelZ))
+    diffZ=(obsZ-modelZ)
+
+    floor=np.min([np.min(obsZ), np.min(modelZ)])
+    ceiling=np.max([np.max(obsZ), np.max(modelZ)])
 
     if plotting==True:
         fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(24, 8))
 
         ax1.set_xlabel('Distance (um)')
         ax1.set_ylabel('Distance (um)')
-        ax1.set_title('Observed Manhattan NN Distances')
-        im = ax1.imshow(obsZ/np.max(obsZ), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        ax1.set_title('Observed NN Distances (Norm. Z-values)')
+        im1 = ax1.imshow(obsZ, aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno', vmin=floor, vmax=ceiling)
         ax1.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+        plt.colorbar(im1, ax=ax1)
 
         ax2.set_xlabel('Distance (um)')
         ax2.set_ylabel('Distance (um)')
-        ax2.set_title('MOM Manhattan NN Distances')
-        im = ax2.imshow(modelZ/np.max(modelZ), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        ax2.set_title('Expected/Modeled NN Distances (Norm. Z-values)')
+        im2 = ax2.imshow(modelZ, aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno', vmin=floor, vmax=ceiling)
         ax2.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+        plt.colorbar(im2, ax=ax2)
 
         ax3.set_xlabel('Distance (um)')
         ax3.set_ylabel('Distance (um)')
         ax3.set_title('Difference in Observed and Expected NN Distances')
-        im = ax3.imshow(diffZ, aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap=kde_cmap)
+        im3 = ax3.imshow(diffZ, aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno')
         ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+        plt.colorbar(im3, ax=ax3)
 
         if filename is not None:
             plt.savefig(filename)
