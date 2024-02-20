@@ -78,6 +78,123 @@ def stomata_rankedNN(sample_data,  distance='M', rankno=5):
     return rankedNNs
 
 
+def stomata_nullNN(distance='M', rankno=5, orilen=20, oriwid=10, xlim=100, ylim=100, n=40, plotno=1, repno=1, techno=1):
+
+    geno='Simulation'
+    
+    #Simulate the same number of images used to generate the current genotypes ranked NNs given a set image resolution (xlim, ylim), coordinate density (n), field plot replicates (plotno), 
+    #biological replicates (repno), and finally technical 'FOV' replicates (techno)
+    
+    flds=np.arange(0,plotno)
+    reps=np.arange(0,repno)
+    fovs=np.arange(0,techno)
+
+    #Empty arrays to house simulated coordinate positions
+    geno_sim=[]
+    plot_sim=[]
+    rep_sim=[]
+    fov_sim=[]
+    index_sim=[]
+    xcenter_sim=[]
+    ycenter_sim=[]
+
+
+    for fld in flds:
+        for rep in reps:
+            for fov in fovs:
+
+                g_sim=np.repeat('Simulation', n)
+                p_sim=np.repeat(fld, n)
+                r_sim=np.repeat(rep+1, n)
+                f_sim=np.repeat(fov+1, n)
+                i_sim=np.arange(0,n)
+                x_sim=np.random.uniform(0, 512 + 1, size=n)
+                y_sim=np.random.uniform(0, 512 + 1, size=n)
+
+                geno_sim.append(g_sim)
+                plot_sim.append(p_sim)
+                rep_sim.append(r_sim)
+                fov_sim.append(f_sim)
+                index_sim.append(i_sim)
+                xcenter_sim.append(x_sim)
+                ycenter_sim.append(y_sim)
+
+
+    geno_sim=np.array(geno_sim).flatten()
+    plot_sim=np.array(plot_sim).flatten()
+    rep_sim=np.array(rep_sim).flatten()
+    fov_sim=np.array(fov_sim).flatten()
+    index_sim=np.array(index_sim).flatten()
+    xcenter_sim=np.array(xcenter_sim).flatten()
+    ycenter_sim=np.array(ycenter_sim).flatten()
+
+    Sim_coords=pd.DataFrame({'Genotype':geno_sim, 'Fieldplot': plot_sim, 'Replicate': rep_sim, 'FOV': fov_sim, 'Index': index_sim, 'x_center': xcenter_sim, 'y_center': ycenter_sim})
+
+    print(str(len(Sim_coords))+' artificial coordinates generated for null model...')
+
+    nullNNs=pd.DataFrame(columns=['Genotype', 'Fieldplot', 'Replicate', 'FOV', 'Current_SC', 'NN_rank', 'NN_dist', 'Origin_X', 'Origin_Y', 'NN_x', 'NN_y', 'NN_dist_xdiff', 'NN_dist_ydiff'])
+
+    flds=np.unique(Sim_NNs['Fieldplot'])
+    reps=np.unique(Sim_NNs['Replicate'])
+    fovs=np.unique(Sim_NNs['FOV'])
+    
+    for fld in flds:
+        for rep in reps:
+            for fov in fovs:
+                Sim_img=Sim_coords.loc[(Sim_coords['Replicate']==rep) & (Sim_coords['FOV']==fov)]
+                x_series=Sim_img['x_center']
+                y_series=Sim_img['y_center']
+
+                coord_index=x_series.index
+
+                for i in coord_index:
+
+                    if distance=='M':
+                        dx=np.abs(x_series-x_series[i])
+                        dy=np.abs(y_series-y_series[i])
+                        D=np.array(dx+dy)
+                    elif distance=='E':
+                        dx=np.square(x_series-x_series[i])
+                        dy=np.square(y_series-y_series[i])
+                        D=np.array(np.sqrt(dx+dy))
+                    else:
+                        print('Distance method supplied not recognized. Present options are \'M\' for Manhattan (Default) and \'E\' for Euclidean.')
+                        return 
+
+                    Dr=D.copy()
+                    Dr.sort()
+
+                    #Remove self NN's with distance of zero as well as all random points less than the average cell size away
+                    Dr=Dr[Dr>((ori_len+ori_wid)/2)]
+
+                    NN_dist=Dr[0:(rankno)]
+
+                    rank_index=[]
+                    
+                    for cur_rdist in NN_dist:
+                        rank_index.append(np.where(D==cur_rdist)[0][0])
+
+                    cur_NN=Sim_img.iloc[rank_index,:]
+
+                    cg=np.repeat(geno, rankno)
+                    cp=np.repeat(fld, rankno)
+                    cr=np.repeat(rep, rankno)
+                    cf=np.repeat(fov, rankno)
+                    ci=np.repeat(np.where(coord_index==i)[0][0]+1, rankno)
+                    NN_rank=range(1,rankno+1)
+                    ori_x=np.repeat(x_series[i], rankno)
+                    ori_y=np.repeat(y_series[i], rankno)
+                    NN_x=cur_NN['x_center']
+                    NN_y=cur_NN['y_center']
+                    NN_xdiff=NN_x-ori_x
+                    NN_ydiff=NN_y-ori_y
+
+                    NN_out=pd.DataFrame({'Genotype': cg, 'Fieldplot': cp, 'Replicate': cr, 'FOV': cf, 'Current_SC': ci, 'NN_rank': NN_rank, 'NN_dist': NN_dist, 'Origin_X': ori_x, 'Origin_Y': ori_y, 'NN_x': NN_x,  'NN_y': NN_y, 'NN_dist_xdiff': NN_xdiff, 'NN_dist_ydiff': NN_ydiff})
+
+                    nullNNs = pd.concat([nullNNs, NN_out], axis=0, ignore_index=True)
+
+    return nullNNs
+
 def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512, bounds=None):
     
 
