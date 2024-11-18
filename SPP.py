@@ -10,6 +10,7 @@ from scipy.stats import multivariate_normal
 from scipy.ndimage import rotate
 from scipy import ndimage
 
+
 def coin(p1):
     r=random.random()
     if r<(1-p1):
