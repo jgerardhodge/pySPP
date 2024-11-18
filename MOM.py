@@ -192,10 +192,8 @@ def stomata_nullNN(distance='M', rankno=5, ori_len=20, ori_wid=10, xlim=100, yli
 
     return nullNNs
 
-def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512, bounds=None):
+def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512, bounds=None, plotting=True, plotname='Plotname'):
     
-
-
     # Create a figure and axis
     fig, ax = plt.subplots(figsize=(6,5))
 
@@ -227,20 +225,25 @@ def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512, bounds
     # Set axis limits
     ax.set_xlim(0, xlimit)
     ax.set_ylim(0, ylimit)
-
+    
     # Set axis labels
-    ax.set_title('Rank '+str(rank)+' NN Associations')
-    ax.set_xlabel('Longitudinal Distance')
-    ax.set_ylabel('Medial Distance')
-
+    ax.set_title('Rank '+str(rank)+' NN Associations', fontsize="22")
+    ax.set_xlabel('Longitudinal Distance', fontsize="16")
+    ax.set_ylabel('Lateral Distance', fontsize="16")
+    ax.tick_params(axis='both', which='major', labelsize=14)
     #Invert y-axis to mirror normal orientation for images
     plt.gca().invert_yaxis()
     
     # Show the plot
-    plt.show()
+    
+    if (plotting==True) & (plotname=='Plotname'):
+        plt.show()
+    elif (plotting==True) & (plotname!='Plotname'):
+        plt.savefig(plotname+'.pdf', format='pdf', bbox_inches='tight')
+        plt.close()
 
 
-def stomata_KDDs(NNSeries, xbound=100, ybound=100, ori_len=20, ori_wid=10, rankno=5, rankmethod='avgrank', plotting=False):
+def stomata_KDDs(NNSeries, xbound=100, ybound=100, ori_len=20, ori_wid=10, rankno=5, rankmethod='avgrank', plotting=False, plotname='Plotname'):
 
     if not rankmethod=='avgrank' and not rankmethod=='currank':
         raise ValueError('Error with the rank method called! For averaging the 1-N ranks call \"avgrank\" whereas for screening a particular rank relationship use \"currank\".')
@@ -281,45 +284,52 @@ def stomata_KDDs(NNSeries, xbound=100, ybound=100, ori_len=20, ori_wid=10, rankn
         # Evaluate the kernel density at each grid point
         Z = np.reshape(kde(positions).T, Y.shape)
 
-    if plotting==True:
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
+      
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
 
-        ax1.set_xlim([-xbound,xbound])
-        ax1.set_ylim([-ybound,ybound])
-        ax1.set_xlabel('Distance (um)')
-        ax1.set_ylabel('Distance (um)')
-        ax1.set_title('NN Distances')
-
-        NNcols=[(1,0,0),(0.9,0.75,0.05), (0.2, 0.8,0.1), (0,0.2,0.8), (0,0.1,0.6)]
-        if rankmethod=='avgrank':
-            for i in range(rankno, 0, -1):
-                ax1.plot(NNSeries[NNSeries['NN_rank']==i]['NN_dist_xdiff'], NNSeries[NNSeries['NN_rank']==i]['NN_dist_ydiff'], '.', color=NNcols[i-1])
-        else:
-            for i in range(rankno, 0, -1):
-                ax1.plot(NNSeries[NNSeries['NN_rank']==rankno]['NN_dist_xdiff'], NNSeries[NNSeries['NN_rank']==rankno]['NN_dist_ydiff'], '.', color=NNcols[rankno-1])
-
-        ax1.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
-
-        cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.45, 0.0, 0.0, 0.9, 1.0])
-        cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
-        cb=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.75, 0.75, 0.0, 0.1, 1.0])
-
-        kde_colchan=np.vstack((cr, cg, cb)).T
-        kde_cmap=mcolors.ListedColormap(kde_colchan)
-
-        # Plot the kernel density estimate
-        plt.figure(figsize=(8,8))
-
-        ax2.set_xlabel('Distance (um)')
-        ax2.set_ylabel('Distance (um)')
-        ax2.set_title('NN Distances')
-        im = ax2.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno')
-        ax2.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
-
-        fig.colorbar(im, ax=ax2)
+    ax1.set_xlim([-xbound,xbound])
+    ax1.set_ylim([-ybound,ybound])
+    ax1.set_xlabel('Distance (um)', fontsize=16)
+    ax1.set_ylabel('Distance (um)', fontsize=16)
+    ax1.set_title('NN Distances', fontsize=22)
+    ax1.tick_params(axis='both', which='major', labelsize=14)
     
-    return Z
+    NNcols=[(0.9, 0.8, 0.1), (0.65, 0.45, 0.25), (0, 0, 0), (0.1, 0, 0.9), (0.4, 0, 0.7)]
+    if rankmethod=='avgrank':
+        for i in range(rankno, 0, -1):
+            ax1.plot(NNSeries[NNSeries['NN_rank']==i]['NN_dist_xdiff'], NNSeries[NNSeries['NN_rank']==i]['NN_dist_ydiff'], '.', color=NNcols[i-1])
+    else:
+        for i in range(rankno, 0, -1):
+            ax1.plot(NNSeries[NNSeries['NN_rank']==rankno]['NN_dist_xdiff'], NNSeries[NNSeries['NN_rank']==rankno]['NN_dist_ydiff'], '.', color=NNcols[rankno-1])
 
+    ax1.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+
+    cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.45, 0.0, 0.0, 0.9, 1.0])
+    cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
+    cb=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.75, 0.75, 0.0, 0.1, 1.0])
+
+    kde_colchan=np.vstack((cr, cg, cb)).T
+    kde_cmap=mcolors.ListedColormap(kde_colchan)
+
+    # Plot the kernel density estimate
+    #plt.figure(figsize=(8,8))
+
+    ax2.set_xlabel('Distance (um)', fontsize=16)
+    ax2.set_title('NN Distances', fontsize=22)
+    ax2.tick_params(axis='both', which='major', labelsize=14)
+    im = ax2.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno')
+    ax2.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
+
+    fig.colorbar(im, ax=ax2)
+
+    if (plotting==True) & (plotname=='Plotname'):
+        plt.show()
+        
+    elif (plotting==True) & (plotname!='Plotname'):
+        fig.savefig(plotname+'.pdf', format='pdf', bbox_inches='tight')
+        plt.close(fig)
+        
+    return Z
 
 def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False, plotname='Plotname', horimax=None, vertmax=None):
 
@@ -348,75 +358,46 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
         hori_p=hori_p+Z[i,:]
         vert_p=vert_p+Z[:,i]
 
-    if (plotting==True) & (plotname=='Plotname'):
+    if (plotting==True):
         
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [8, 4], 'height_ratios': [4, 8]}, figsize=(12, 12))
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [8, 4], 'height_ratios': [4, 8]}, figsize=(14, 14))
         ax2.axis('off')
 
         #gs = fig.add_gridspec(2, 2, height_ratios=[1, 2], width_ratios=[2, 1])
 
         #ax1 = fig.add_subplot(gs[0, 0])
         #plt.figure(figsize=(8,4))
-        ax1.set_xlabel('Distance (um)')
-        ax1.set_ylabel('Average Prob.')
-        ax1.set_title('Horizontal NN Distances')
+        ax1.set_ylabel('Average Prob.', fontsize=18)
+        ax1.set_title('Horizontal NN Distances', fontsize=20)
+        ax1.tick_params(axis='both', which='major', labelsize=14)
         if (horimax!=None):
             ax1.set_ylim([np.min(hori_p),horimax])
         ax1.plot(hori_x, hori_p)
 
         #ax4 = fig.add_subplot(gs[1, 1])
         #plt.figure(figsize=(4,8))
-        ax4.set_xlabel('Average Prob.')
-        ax4.set_ylabel('Distance (um)')
-        ax4.set_title('Vertical NN Distances')
+        ax4.set_xlabel('Average Prob.', fontsize=18)
+        ax4.set_title('Vertical NN Distances', fontsize=22)
+        ax4.tick_params(axis='both', which='major', labelsize=14)
         if (vertmax!=None):
             ax4.set_xlim([np.min(vert_p),vertmax])
         ax4.plot(vert_p, vert_y)
 
         #ax3 = fig.add_subplot(gs[1, 0])
         #plt.figure(figsize=(8,8))
-        ax3.set_xlabel('Distance (um)')
-        ax3.set_ylabel('Distance (um)')
-        ax3.set_title('NN Distances')
+        ax3.set_xlabel('Distance (um)', fontsize=18)
+        ax3.set_ylabel('Distance (um)', fontsize=18)
+        ax3.set_title('SPP Phenotype', fontsize=22)
+        ax3.tick_params(axis='both', which='major', labelsize=14)
         im = ax3.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno')
         ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
-        plt.show()
+        
 
-    elif (plotting==True) & (plotname!='Plotname'):
-
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, gridspec_kw={'width_ratios': [8, 4], 'height_ratios': [4, 8]}, figsize=(12, 12))
-        ax2.axis('off')
-
-        #gs = fig.add_gridspec(2, 2, height_ratios=[1, 2], width_ratios=[2, 1])
-
-        #ax1 = fig.add_subplot(gs[0, 0])
-        #plt.figure(figsize=(8,4))
-        ax1.set_xlabel('Distance (um)')
-        ax1.set_ylabel('Average Prob.')
-        ax1.set_title('Horizontal NN Distances')
-        if (horimax!=None):
-            ax1.set_ylim([np.min(hori_p),horimax])
-        ax1.plot(hori_x, hori_p)
-
-        #ax4 = fig.add_subplot(gs[1, 1])
-        #plt.figure(figsize=(4,8))
-        ax4.set_xlabel('Average Prob.')
-        ax4.set_ylabel('Distance (um)')
-        ax4.set_title('Vertical NN Distances')
-        if (vertmax!=None):
-            ax4.set_xlim([np.min(vert_p),vertmax])
-        ax4.plot(vert_p, vert_y)
-
-        #ax3 = fig.add_subplot(gs[1, 0])
-        #plt.figure(figsize=(8,8))
-        ax3.set_xlabel('Distance (um)')
-        ax3.set_ylabel('Distance (um)')
-        ax3.set_title('NN Distances')
-        im = ax3.imshow(Z/np.max(Z), aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno')
-        ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
-
-        plt.savefig(plotname+'.pdf', format='pdf', bbox_inches='tight')
-        plt.close()
+        if (plotname!='Plotname'):
+            plt.savefig(plotname+'.pdf', format='pdf', bbox_inches='tight')
+            plt.close()
+        else:
+            plt.show()
 
     return hori_p, vert_p
 
@@ -612,7 +593,7 @@ def stomata_KDD_deriv_anno(vp, Z, xbound, ybound, ori_len=20, ori_wid=10, plotti
     return origin_trench_dist, origin_peak_dist, trenchprob_FC, Peaksprob_FC
 
 
-def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks, plotting=False, filename=None):
+def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks, plotting=False, plotname='Plotname'):
 
     cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.45, 0.0, 0.0, 0.9, 1.0])
     cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
@@ -630,31 +611,30 @@ def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks, 
     ceiling=np.max([np.max(obsZ), np.max(modelZ)])
 
     if plotting==True:
-        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(24, 8))
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(24, 7))
 
-        ax1.set_xlabel('Distance (um)')
-        ax1.set_ylabel('Distance (um)')
-        ax1.set_title('Observed NN Distances (Norm. Z-values)')
+        ax1.set_xlabel('Distance (um)', fontsize=16)
+        ax1.set_ylabel('Distance (um)', fontsize=16)
+        ax1.set_title('Observed SPP', fontsize=22)
+        ax1.tick_params(axis='both', which='major', labelsize=14)
         im1 = ax1.imshow(obsZ, aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno', vmin=floor, vmax=ceiling)
         ax1.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
-        plt.colorbar(im1, ax=ax1)
-
-        ax2.set_xlabel('Distance (um)')
-        ax2.set_ylabel('Distance (um)')
-        ax2.set_title('Expected/Modeled NN Distances (Norm. Z-values)')
+        
+        ax2.set_xlabel('Distance (um)', fontsize=16)
+        ax2.set_title('Expected Model', fontsize=22)
+        ax2.tick_params(axis='both', which='major', labelsize=14)
         im2 = ax2.imshow(modelZ, aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno', vmin=floor, vmax=ceiling)
         ax2.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
-        plt.colorbar(im2, ax=ax2)
-
-        ax3.set_xlabel('Distance (um)')
-        ax3.set_ylabel('Distance (um)')
-        ax3.set_title('Difference in Observed and Expected NN Distances')
+        
+        ax3.set_xlabel('Distance (um)', fontsize=16)
+        ax3.set_title('Obs. - Exp. Difference', fontsize=22)
+        ax3.tick_params(axis='both', which='major', labelsize=14)
         im3 = ax3.imshow(diffZ, aspect='auto', extent=[xmin, xmax, ymin, ymax], cmap='inferno')
         ax3.fill([-ori_len, -ori_len, ori_len, ori_len], [-ori_wid, ori_wid, ori_wid, -ori_wid], linewidth=2, edgecolor=(0,0,0), facecolor=(1,1,1))
         plt.colorbar(im3, ax=ax3)
 
-        if filename is not None:
-            plt.savefig(filename)
+        if plotname!='Plotname':
+            fig.savefig(plotname+'.pdf', format='pdf', bbox_inches='tight')
             plt.close(fig)
 
     OEscore=np.round(np.sum(np.abs((obsZ/np.max(obsZ))-(modelZ/np.max(modelZ)))),3)
