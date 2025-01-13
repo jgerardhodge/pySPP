@@ -12,6 +12,44 @@ from scipy import ndimage
 
 def stomata_rankedNN(sample_data,  distance='M', rankno=5):
 
+    """
+    
+    ----------
+    Parameters
+    ----------
+    
+    sample_data : (REQUIRED INPUT) A pandas dataframe which follows the standard formatting of this library for initial inputs with the 
+                   the following columns expected:
+                       'Genotype' -           Genotype for the stomatal coordinates 
+                       'Fieldplot' -          Fieldplot or Environmental group of the current Genotype
+                       'Replicate' -          Biological Replicate of the current Genotype-Fieldplot
+                       'FOV' -                Technical Replicate (i.e., image) of the current Genotype-Fieldplot-Replicate
+                       'x_center' -           The centroid x-coordinate location for the stomata
+                       'y_center' -           The centroid y-coordinate location for the stomata
+                       'length' -             The mask/bounding box length of the stomata
+                       'width' -              The mask/bounding box width of the stomata
+                       'stoma_area' -         The mask/bounding box area of the stomata
+                       'length_width_ratio' - The mask/bounding box length/width ratio of the stomata
+    distance :    (Defaults to 'M') Takes a single character being either 'M' or 'E' that defines the distance method used to 
+                   assess rank-ordered neighbor relationships between stomatal coordinates, 'M' or Manhattan distance typically 
+                   works best on grasses due to their file system, 'E' or Euclidean is also available as an option however.
+    rankno :      (Defaults to 5) An integer representing the number of rank-order nearest neighbors to identify for each origin 
+                   coordinate.
+    
+    ----------
+    Returns
+    ----------
+    rankedNNs :   (pandas.core.frame.DataFrame) The rank-order nearest neighbors for each individual stomata contained with the image(s). 
+    
+    
+    ----------
+    Notes
+    ----------
+    A primary function of the SPP library used to assess all-by-all rank-ordered nearest neighbor relationships necessary for 
+    estimating the Stomatal Patterning Phenotype (SPP).
+    
+    """
+    
     geno=np.unique(sample_data['Genotype'])[0]
     fld=np.unique(sample_data['Fieldplot'])[0]
     rep=np.unique(sample_data['Replicate'])[0]
@@ -72,6 +110,51 @@ def stomata_rankedNN(sample_data,  distance='M', rankno=5):
 
 def stomata_nullNN(distance='M', rankno=5, ori_len=20, ori_wid=10, xlim=100, ylim=100, n=40, plotno=1, repno=1, techno=1):
 
+    """
+    
+    ----------
+    Parameters
+    ----------
+
+    
+    distance :   (Defaults to 'M') Takes a single character being either 'M' or 'E' that defines the distance method used to 
+                  assess rank-ordered neighbor relationships between stomatal coordinates, 'M' or Manhattan distance typically 
+                  works best on grasses due to their file system, 'E' or Euclidean is also available as an option however.
+    rankno :     (Defaults to 5) An integer representing the rank number to used for generating KDDs, either the average among ranks up 
+                  to this number or as this current specific number by itself. The context of how rankno is used is governed by the 
+                  subsequent argument, rankmethod.
+    ori_len :    (Defaults to 20) An integer representing the average length of the origin objects (i.e., stomatal complex lengths) 
+                  being assessed, used for plotting.
+    ori_wid :    (Defaults to 10) An integer representing the average width of the origin objects (i.e., stomatal complex widths) 
+                  being assessed, used for plotting.
+    xbound :     (Defaults to 100) An integer representing the bounds of the x-axis relative to the origin (typically best to slightly 
+                  overshoot the broadest rank-order distance.
+    ybound :     (Defaults to 100) An integer representing the bounds of the y-axis relative to the origin (typically best to slightly 
+                  overshoot the broadest rank-order distance.
+    n :          (Defaults to 40) An integer representing the average density of coordinates to randomly generate per simulated 'image',
+                  equivalent to average stomatal density. 
+    plotno :     (Defaults to 1) An integer representing the average number of fieldplot replicates to simulate.
+    repno :      (Defaults to 1) An integer representing the average number of biological replicates to simulate.
+    techno :     (Defaults to 1) An integer representing the average number of technical replicates to simulate.
+
+
+    ----------
+    Returns
+    ----------
+    nullNNs :     (pandas.core.frame.DataFrame) An artifical set of rank-order nearest neighbors for for 'n' * 'plotno' * 'repno' * 'techno' 
+                   numbers of starting coordinates. 
+    
+    
+    ----------
+    Notes
+    ----------
+    
+    A supplementary function of the SPP library used to generate an artifical dataset assuming that either the Manhattan or Euclidean distance method
+    is the only source of variation being seen within this dataset to act as a null model for comparison.
+
+    
+    """
+    
     geno='Simulation'
     
     #Simulate the same number of images used to generate the current genotypes ranked NNs given a set image resolution (xlim, ylim), coordinate density (n), field plot replicates (plotno), 
@@ -186,6 +269,52 @@ def stomata_nullNN(distance='M', rankno=5, ori_len=20, ori_wid=10, xlim=100, yli
 
 def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512, bounds=None, plotting=True, plotname='Plotname'):
     
+    """
+    
+    ----------
+    Parameters
+    ----------
+    
+    sample_data : (REQUIRED INPUT) A pandas dataframe which follows the standard formatting of this library for initial inputs with the 
+                   the following columns expected:
+                       'Genotype' -           Genotype for the stomatal coordinates 
+                       'Fieldplot' -          Fieldplot or Environmental group of the current Genotype
+                       'Replicate' -          Biological Replicate of the current Genotype-Fieldplot
+                       'FOV' -                Technical Replicate (i.e., image) of the current Genotype-Fieldplot-Replicate
+                       'x_center' -           The centroid x-coordinate location for the stomata
+                       'y_center' -           The centroid y-coordinate location for the stomata
+                       'length' -             The mask/bounding box length of the stomata
+                       'width' -              The mask/bounding box width of the stomata
+                       'stoma_area' -         The mask/bounding box area of the stomata
+                       'length_width_ratio' - The mask/bounding box length/width ratio of the stomata
+    rankedNNs :   (REQUIRED INPUT) A pandas dataframe with rank-order nearest neighbor dataframe generated from stomata_rankedNN(...).
+    rank :        (Defaults to 1) A integer which represents the current rank-order nearest neighbor relationship to plot as vectors between 
+                   the coordinates.
+    xlimit :      (Defaults to 512) A integer which defines the bounds of the x-axis to use for plotting (best if comparable to the original
+                   images dimensions.
+    ylimit :      (Defaults to 512) A integer which defines the bounds of the y-axis to use for plotting (best if comparable to the original
+                   images dimensions.
+    bounds :      (Defaults to None) A integer which specifies the bounding edge filter to apply along the x and y axes, which is illustrated
+                   as a dotted line box within the plot.
+    plotting :    (Defaults to False) Boolean, specifies whether to output a plotting result of the current KDD, when using to generate batch 
+                   data particularly for large populations it is advised to keep this set to False.
+    plotname :    (Defaults to 'Plotname') Character string where if the default 'plotname' is not retained, the plot will be saved as a PDF
+                   using this string argument as the filename.
+    
+    ----------
+    Returns
+    ----------
+    
+    *This function is only used for graphical outputs, no data objects are returned to the program environment.
+    
+    ----------
+    Notes
+    ----------
+    A supplementary function of the SPP library used to visualize the rank-ordered nearest neighbor relationships of the dataset at a specific
+    rank-order.  These are illustrated as vectors radiating from each origin to their current ranks nearest neighbor.
+    
+    """
+    
     # Create a figure and axis
     fig, ax = plt.subplots(figsize=(6,5))
 
@@ -237,6 +366,51 @@ def plot_rankedNN(sample_data, rankedNNs, rank=1, xlimit=512, ylimit=512, bounds
 
 def stomata_KDDs(NNSeries, xbound=100, ybound=100, ori_len=20, ori_wid=10, rankno=5, rankmethod='avgrank', plotting=False, plotname='Plotname'):
 
+    """
+    
+    ----------
+    Parameters
+    ----------
+
+    
+    NNSeries :   (REQUIRED INPUT) A pandas dataframe with rank-order nearest neighbor dataframe generated from stomata_rankedNN(...).
+    xbound :     (Defaults to 100) An integer representing the bounds of the x-axis relative to the origin (typically best to slightly 
+                  overshoot the broadest rank-order distance.
+    ybound :     (Defaults to 100) An integer representing the bounds of the y-axis relative to the origin (typically best to slightly 
+                  overshoot the broadest rank-order distance.
+    ori_len :    (Defaults to 20) An integer representing the average length of the origin objects (i.e., stomatal complex lengths) 
+                  being assessed, used for plotting.
+    ori_wid :    (Defaults to 10) An integer representing the average width of the origin objects (i.e., stomatal complex widths) 
+                  being assessed, used for plotting.
+    rankno :     (Defaults to 5) An integer representing the rank number to used for generating KDDs, either the average among ranks up 
+                  to this number or as this current specific number by itself. The context of how rankno is used is governed by the 
+                  subsequent argument, rankmethod.
+    rankmethod : (Defaults to 'avgrank') Character string specifying the behavior of how the 'rankno' integer will be used. If assigned to 
+                  'avgrank' a KDD will be generated of a average from the 1st - rankno sequence of rank-orders.  If assigned to 'currank' 
+                  a KDD will be generated corresponding to the current rank-order number presented in rankno.
+    plotting :   (Defaults to False) Boolean, specifies whether to output a plotting result of the current KDD, when using to generate batch 
+                  data particularly for large populations it is advised to keep this set to False.
+    plotname :   (Defaults to 'Plotname') Character string where if the default 'plotname' is not retained, the plot will be saved as a PDF
+                  using this string argument as the filename.
+
+
+    ----------
+    Returns
+    ----------
+    
+    Z :           (numpy.ndarray) A 2-dimensional kernel density distribution matrix representing the spatial probability that corresponds to 
+                   the rank-order nearest neighbor distances from the origin.
+    
+    
+    ----------
+    Notes
+    ----------
+    A primary function of the SPP library used to convert the rank-ordered nearest neighbors into a 2D probability distribution leveraging a 
+    kernel density distribution (KDD) method.  This heatmap represents the Stomatal Patterning Phenotype (SPP) that is intrinsic to this 
+    library.
+    
+    """
+        
     if not rankmethod=='avgrank' and not rankmethod=='currank':
         raise ValueError('Error with the rank method called! For averaging the 1-N ranks call \"avgrank\" whereas for screening a particular rank relationship use \"currank\".')
 
@@ -325,6 +499,57 @@ def stomata_KDDs(NNSeries, xbound=100, ybound=100, ori_len=20, ori_wid=10, rankn
 
 def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno=5, plotting=False, plotname='Plotname', horimax=None, vertmax=None):
 
+    
+    """
+    
+    ----------
+    Parameters
+    ----------
+
+    NNSeries :   (REQUIRED INPUT) A pandas dataframe with rank-order nearest neighbor dataframe generated from stomata_rankedNN(...).
+    Z :          (REQUIRED INPUT) A 2-dimensional numpy array representing the kernel density distribution of the rank-order nearest 
+                  neighbors generated from the stomata_KDDs(...) function.
+    xbound :     (Defaults to 100) An integer representing the bounds of the x-axis relative to the origin (typically best to slightly 
+                  overshoot the broadest rank-order distance.
+    ybound :     (Defaults to 100) An integer representing the bounds of the y-axis relative to the origin (typically best to slightly 
+                  overshoot the broadest rank-order distance.
+    ori_len :    (Defaults to 20) An integer representing the average length of the origin objects (i.e., stomatal complex lengths) 
+                  being assessed, used for plotting.
+    ori_wid :    (Defaults to 10) An integer representing the average width of the origin objects (i.e., stomatal complex widths) 
+                  being assessed, used for plotting.. 
+    rankno -     (Defaults to 5) An integer representing the rank number to used for generating KDDs, specifically the average among ranks up 
+                  to this number, this function lacks a 'currank' rankmethod behavior akin to the stomata_KDDs(...) function.  
+    plotting :   (Defaults to False) Boolean, specifies whether to output a plotting result of the current KDD, when using to generate batch 
+                  data particularly for large populations it is advised to keep this set to False.
+    plotname :   (Defaults to 'Plotname') Character string where if the default 'plotname' is not retained, the plot will be saved as a PDF
+                  using this string argument as the filename.
+    horimax :    (Defaults to None) Integer representing the ceiling when plotting the horizontal density distribution, this can be useful when 
+                  comparing multiple flattened histogram plots as the magnitude can be normalized to a global ceiling.
+    vertmax :    (Defaults to None) Integer representing the ceiling when plotting the vertical density distribution, this can be useful when 
+                  comparing multiple flattened histogram plots as the magnitude can be normalized to a global ceiling.
+    
+    
+    ----------
+    Returns
+    ----------
+    
+    hp :          (numpy.ndarray) A horizontally flattened 1-dimensional probability density distribution corresponding to the 2D KDD object, 'Z' 
+                   which was used as an input.
+    vp :          (numpy.ndarray) A vertically flattened 1-dimensional probability density distribution corresponding to the 2D KDD object, 'Z' 
+                   which was used as an input.
+
+    
+    ----------
+    Notes
+    ----------
+    
+    A primary function of the SPP library used to extract flattened 1-dimensional horizontal (hp) and vertical (vp) distributions corresponding to
+    the Z spatial probabilities representing the Stomatal Patterning Phenotype (SPP).  This data reduction can help with spatial annotations and 
+    downstream trait quantification, particularly from the 'vp' distribution in grass systems.
+    
+    """
+        
+    
     KDDy=NNSeries['NN_dist_xdiff']
     KDDx=NNSeries['NN_dist_ydiff']
 
@@ -396,6 +621,51 @@ def stomata_KDD_hist(NNSeries, Z, xbound, ybound, ori_len=20, ori_wid=10, rankno
 
 def stomata_KDD_deriv_anno(vp, Z, xbound, ybound, ori_len=20, ori_wid=10, plotting=False, plotname='Plotname'):
 
+    """
+    ----------
+    Parameters
+    ----------
+    
+    vp :       (REQUIRED INPUT) A 1-dimensional numpy array representing a vertically flattened density distribution generated from 
+                stomata_KDD_hist(...) function.
+    Z :        (REQUIRED INPUT) The Z probability surface KDD generated from stomata_KDDs(...), used for plotting.
+    xbound :   (Defaults to 100) An integer representing the bounds of the x-axis relative to the origin (typically best to slightly 
+                overshoot the broadest rank-order distance.
+    ybound :   (Defaults to 100) An integer representing the bounds of the y-axis relative to the origin (typically best to slightly 
+                overshoot the broadest rank-order distance.
+    ori_len :  (Defaults to 20) An integer representing the average length of the origin objects (i.e., stomatal complex lengths) 
+                being assessed, used for plotting.
+    ori_wid :  (Defaults to 10) An integer representing the average width of the origin objects (i.e., stomatal complex widths) 
+                being assessed, used for plotting.. 
+    plotting : (Defaults to False) Boolean, specifies whether to output a plotting result of the current KDD, when using to generate batch 
+                data particularly for large populations it is advised to keep this set to False.
+    plotname : (Defaults to 'Plotname') Character string where if the default 'plotname' is not retained, the plot will be saved as a PDF
+                using this string argument as the filename.
+    
+    ----------
+    Returns
+    ----------
+
+    origin_trench_dist : (numpy.float64) A floating point number representing the distance between the probability trenches and the 
+                          origin's in-file peak.
+    origin_peak_dist :   (numpy.float64)  A floating point number representing the distance between the side-file peaks and the origin's
+                          in-file peak.
+    trenchprob_FC :      (numpy.float64) A floating point number representing the fold change difference between the proabilities of the 
+                          probability trenches compared to the primary in-file peak.
+    Peaksprob_FC :       (numpy.float64) A floating point number representing the fold change difference between the proabilities of the 
+                          side-file peaks compared to the primary in-file peak.
+    
+    ----------
+    Notes
+    ----------
+    
+    A primary function of the SPP library used to generate positional annotations for the probability trench and side-file peaks of a 
+    vertically flattened 1-dimensional distribution which are subsequently used to generate distance and probability fold change trait
+    measurements. 
+    
+    
+    """
+    
     cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.45, 0.0, 0.0, 0.9, 1.0])
     cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
     cb=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.75, 0.75, 0.0, 0.1, 1.0])
@@ -585,8 +855,51 @@ def stomata_KDD_deriv_anno(vp, Z, xbound, ybound, ori_len=20, ori_wid=10, plotti
     return origin_trench_dist, origin_peak_dist, trenchprob_FC, Peaksprob_FC
 
 
-def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks, plotting=False, plotname='Plotname'):
+def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, rankno, plotting=False, plotname='Plotname'):
 
+    """
+    ----------
+    Parameters
+    ----------
+
+    obsZ :       (REQUIRED INPUT) A 2-dimensional numpy array representing the observed kernel density distribution of the rank-order 
+                  nearest neighbors generated from the stomata_KDDs(...) function.
+    modelZ :     (REQUIRED INPUT) A 2-dimensional numpy array representing a modeled (or alternative observed) kernel density distribution 
+                  of the rank-order nearest neighbors generated from the stomata_KDDs(...) function.
+    xbound :     (Defaults to 100) An integer representing the bounds of the x-axis relative to the origin (typically best to slightly 
+                  overshoot the broadest rank-order distance.
+    ybound :     (Defaults to 100) An integer representing the bounds of the y-axis relative to the origin (typically best to slightly 
+                  overshoot the broadest rank-order distance.
+    ori_len :    (Defaults to 20) An integer representing the average length of the origin objects (i.e., stomatal complex lengths) 
+                  being assessed, used for plotting.
+    ori_wid :    (Defaults to 10) An integer representing the average width of the origin objects (i.e., stomatal complex widths) 
+                  being assessed, used for plotting.. 
+    rankno :     (Defaults to 5) An integer representing the rank number to used for generating KDDs, specifically the average among ranks up 
+                  to this number, this function lacks a 'currank' rankmethod behavior akin to the stomata_KDDs(...) function.  
+    plotting :   (Defaults to False) Boolean, specifies whether to output a plotting result of the current KDD, when using to generate batch 
+                  data particularly for large populations it is advised to keep this set to False.
+    plotname :   (Defaults to 'Plotname') Character string where if the default 'plotname' is not retained, the plot will be saved as a PDF
+                  using this string argument as the filename. 
+    
+    ----------
+    Returns
+    ----------
+    
+    OEscore :    (numpy.float64) A floating point number representing a overall score of the absolute difference between all X-Y kernel grid 
+                  positions between the obsZ and modelZ numpy array inputs.
+    diffZ :      (numpy.ndarray) A 2-dimensional numpy array representing the differences at each X-Y kernel grid position between the obsZ 
+                  and modelZ input arrays.
+    
+    ----------
+    Notes
+    ----------
+    
+    A supplementary function of the SPP library used to enable comparison between two SPP 2-dimensional arrays either as a observed vs. null 
+    model comparison or through comparing two genotypes in order to recognize where these two spatial probabilities vary and in what direction, 
+    given that positive values represent a 'obsZ' bias whereas negative values represent a 'modelZ' bias.
+    
+    """
+    
     cr=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.45, 0.0, 0.0, 0.9, 1.0])
     cg=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.0, 0.0, 0.0, 0.75, 1.0])
     cb=np.interp(np.linspace(0, 1, 256), [0.0, 0.25, 0.5, 0.75, 1.0], [0.75, 0.75, 0.0, 0.1, 1.0])
@@ -634,9 +947,31 @@ def stomata_compare_KDDs(obsZ, modelZ, xbound, ybound, ori_len, ori_wid, ranks, 
     return OEscore, diffZ
 
 def stomata_KDD_rorshach(Z, plotting=False):
-    ###############################
-    # Prospective Rorshach Function
-    ###############################
+    
+    """
+    
+    ----------
+    Parameters
+    ----------
+    
+    Z :          (REQUIRED INPUT) A 2D numpy array representing the Z probability surface KDD generated from stomata_KDDs(...).
+    plotting :   (Defaults to False) Boolean, specifies whether to output a plotting result of the current KDD, when using to generate batch 
+                  data particularly for large populations it is advised to keep this set to False.
+    
+    ----------
+    Returns
+    ----------
+    Zrorshach :   (numpy.ndarray) A rorshach-folding normalized version of the original Z numpy array input.
+    
+    
+    ----------
+    Notes
+    ----------
+    A supplementary function of the SPP library used to normalize uneven Z probability surfaces by folding the 4 quadrants relative to the origin 
+    over one another and averaging (akin to a rorshach-blot, hence the name) then using this averaged value to generate a new normalized Z array.
+   
+     
+    """
 
     xlim=int(Z.shape[0])
     ylim=int(Z.shape[1])
@@ -680,6 +1015,59 @@ def stomata_KDD_rorshach(Z, plotting=False):
 
 def stomata_KDD_peak_spacing(Zif, Zsp, xbound, ybound, masking_val=0.5, trench_thresh=25, buffer=5, plotting=False, plotname='Plotname'):
 
+    """
+    ----------
+    Parameters
+    ----------
+    
+    Zif :           (REQUIRED INPUT) The Z probability surface focused on the in-file peaks KDD generated from stomata_KDDs(...).
+    Zsp :           (REQUIRED INPUT) The Z probability surface focused on the side-file peaks KDD generated from stomata_KDDs(...).
+    xbound :        (Defaults to 100) An integer representing the bounds of the x-axis relative to the origin (typically best to slightly 
+                     overshoot the broadest rank-order distance.
+    ybound :        (Defaults to 100) An integer representing the bounds of the y-axis relative to the origin (typically best to slightly 
+                     overshoot the broadest rank-order distance.
+    masking_val :   (Defaults to 0.5) floating point number ranging from 0.0 - 1.0, T
+    trench_thresh : (Defaults to 10) Integer
+    buffer -        (Defaults to 5) Integer
+    ori_len :       (Defaults to 20) An integer representing the average length of the origin objects (i.e., stomatal complex lengths) 
+                     being assessed, used for plotting.
+    ori_wid :       (Defaults to 10) An integer representing the average width of the origin objects (i.e., stomatal complex widths) 
+                     being assessed, used for plotting.. 
+    plotting :      (Defaults to False) Boolean, specifies whether to output a plotting result of the current KDD, when using to generate batch 
+                     data particularly for large populations it is advised to keep this set to False.
+    plotname :      (Defaults to 'Plotname') Character string where if the default 'plotname' is not retained, the plot will be saved as a PDF
+                     using this string argument as the filename.
+    
+    ----------
+    Returns
+    ----------
+
+    if_len :        (float) A floating point number representing the in-file mask x-axis bounding box length, used as a measure of variance for 
+                     the in-file peak.
+    if_wid :        (float) A floating point number representing the in-file mask y-axis bounding box width, used as a measure of variance for 
+                     the in-file peak.
+    if_area :       (float) A floating point number representing the in-file mask bounding box area, used as a measure of variance for the in-file 
+                     peak.
+    if_dist :       (float) A floating point number representing the centroid distance between the in-file masks and the origin.
+    sp_len :        (float) A floating point number representing the side-file mask x-axis bounding box length, used as a measure of variance for 
+                     the side-file peak.
+    sp_wid :        (float) A floating point number representing the side-file mask y-axis bounding box width, used as a measure of variance for 
+                     the side-file peak.
+    sp_area :       (float) A floating point number representing the side-file mask bounding box area, used as a measure of variance for the 
+                     side-file peak.
+    sp_dist :       (float) A floating point number representing the centroid distance between the side-file masks and the origin.
+    
+    ----------
+    Notes
+    ----------
+    
+    A primary function of the SPP library used to generate two sets of binary masks for the in-file and side-file peaks respectively which are then 
+    used to generate a series of variance measures based on the bounding box length, width, and areas for these peaks as well as their corresponding
+    centroid distance from the origin.
+    
+    
+    """
+        
     # Create a series of empty vectors to house output values
     prob_len=[]
     prob_wid=[]
