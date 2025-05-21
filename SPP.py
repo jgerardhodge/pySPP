@@ -10,6 +10,7 @@ from scipy.stats import multivariate_normal
 from scipy.ndimage import rotate
 from scipy import ndimage
 
+
 def stomata_rankedNN(sample_data,  distance='M', rankno=5):
 
     """
