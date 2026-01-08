@@ -104,7 +104,10 @@ def stomata_rankedNN(sample_data,  distance='M', rankno=5):
 
         NN_out=pd.DataFrame({'Genotype': cg, 'Fieldplot': cp, 'Replicate': cr, 'FOV': cf, 'Current_SC': ci, 'NN_rank': NN_rank, 'NN_dist': NN_dist, 'Origin_X': ori_x, 'Origin_Y': ori_y, 'NN_x': NN_x,  'NN_y': NN_y, 'NN_dist_xdiff': NN_xdiff, 'NN_dist_ydiff': NN_ydiff})
 
-        rankedNNs = pd.concat([rankedNNs, NN_out], axis=0, ignore_index=True)
+        if (len(rankedNNs)==0):
+            rankedNNs = NN_out
+        else:
+            rankedNNs = pd.concat([rankedNNs, NN_out], axis=0, ignore_index=True)
 
     return rankedNNs
 
@@ -264,7 +267,10 @@ def stomata_nullNN(distance='M', rankno=5, ori_len=20, ori_wid=10, xlim=100, yli
 
                     NN_out=pd.DataFrame({'Genotype': cg, 'Fieldplot': cp, 'Replicate': cr, 'FOV': cf, 'Current_SC': ci, 'NN_rank': NN_rank, 'NN_dist': NN_dist, 'Origin_X': ori_x, 'Origin_Y': ori_y, 'NN_x': NN_x,  'NN_y': NN_y, 'NN_dist_xdiff': NN_xdiff, 'NN_dist_ydiff': NN_ydiff})
 
-                    nullNNs = pd.concat([nullNNs, NN_out], axis=0, ignore_index=True)
+                    if (len(nullNNs)==0):
+                        nullNNs = NN_out
+                    else:
+                        nullNNs = pd.concat([nullNNs, NN_out], axis=0, ignore_index=True)
 
     return nullNNs
 
