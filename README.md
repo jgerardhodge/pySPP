@@ -1,4 +1,4 @@
-# Python Stomatal Patterning Phenotyping Library (pySPP)
+# Python Stomatal Patterning Phenotype Library (pySPP)
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jgerardhodge/pySPP/HEAD?urlpath=%2Fdoc%2Ftree%2FSPP_Binder_Demo.ipynb)
 
